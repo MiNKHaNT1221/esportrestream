@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import ViewerApp from './viewer.jsx';
+// import ViewerApp from './viewer.jsx';
 // import UserApp from './user.jsx';
 // import CasterApp from './caster.jsx';
 // import StreamerApp from './streamer.jsx';
@@ -100,7 +100,7 @@ export default function Root() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/viewer" element={<ViewerApp />} />
+                {/* <Route path="/viewer" element={<ViewerApp />} /> */}
                 {/* <Route path="/user" element={<UserApp />} />
                 <Route path="/caster" element={<CasterApp />} />
                 <Route path="/streamer" element={<StreamerApp />} />
