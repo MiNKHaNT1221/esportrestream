@@ -56,9 +56,9 @@ const TopNavbar = ({ activeTab, setActiveTab }) => {
                 <div className={`text-3xl font-black uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(0,255,65,0.4)] ${NEON_GREEN} flex items-center gap-2`}>
                     {/* Image Session Placeholder: Replace the src below with your logo URL */}
                     <img
-                        src="src/assets/logo_13.png"
+                        src="src/assets/logo14.png"
                         alt="Website Logo"
-                        className={`w-15 h-15 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
+                        className={`w-14 h-14 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
                         onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/30x30/FF00A6/000000?text=LOGO" }}
                     />
                     ESPORTSRESTREAM
