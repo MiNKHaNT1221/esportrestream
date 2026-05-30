@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+// Firebase Imports
+import { db, auth, provider } from '../firebase';
+import { ref, push, onValue, serverTimestamp } from 'firebase/database';
+import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import {
     PlayCircle,
     Mic2,
@@ -38,6 +43,122 @@ const NEON_PINK_ACCENT = NEON_PINK;
 const NEON_SHADOW_GREEN = 'shadow-[0_0_15px_rgba(0,255,65,0.6)]';
 const NEON_SHADOW_PINK = 'shadow-[0_0_15px_rgba(255,0,166,0.6)]';
 
+const LiveStreamingPage = () => {
+    const [chatVisible, setChatVisible] = useState(true);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        const chatRef = ref(db, 'liveChat');
+        onValue(chatRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const messageList = Object.keys(data).map(key => ({
+                    id: key,
+                    ...data[key]
+                }));
+                setMessages(messageList);
+            } else {
+                setMessages([]);
+            }
+        });
+    }, []);
+    const handleLogin = async () => {
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Login Error:", error);
+        }
+    };
+    const handleSendMessage = () => {
+        if (newMessage.trim() === '' || !user) return;
+        
+        const chatRef = ref(db, 'liveChat');
+        push(chatRef, {
+            text: newMessage,
+            userId: user.uid,
+            userName: user.displayName || 'Anonymous',
+            timestamp: serverTimestamp()
+        });
+        setNewMessage('');
+    };
+    return (
+        <div className="flex h-[calc(100vh-80px)] p-6 gap-6 relative z-10 overflow-hidden">
+            {/* ... (Video Player အပိုင်း အရင်အတိုင်း ထားပါ) ... */}
+            
+            {/* --- Right Column: Chat (Redesigned with Logic) --- */}
+            <div className={`transition-all duration-500 ease-in-out overflow-hidden ${chatVisible ? 'w-96 opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-10 p-0'}`}>
+                <div className="h-full bg-black/80 backdrop-blur-2xl border-4 border-[#FF00A6]/70 rounded-lg flex flex-col shadow-[0_0_15px_rgba(255,0,166,0.4)] relative overflow-hidden">
+                    
+                    {/* Chat Header */}
+                    <div className="flex justify-between items-center p-4 border-b-2 border-[#FF00A6]/50 bg-black/50">
+                        <h2 className="text-lg font-black uppercase text-white flex items-center gap-2 text-[#FF00A6]">
+                            <MessageSquare size={18} /> LIVE CHAT
+                        </h2>
+                        {user ? (
+                            <button onClick={() => signOut(auth)} className="text-xs text-white/50 hover:text-red-500">LOGOUT</button>
+                        ) : null}
+                    </div>
+
+                    {/* Chat Messages Rendering */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar text-xs font-mono">
+                        {messages.map((msg, idx) => (
+                            <div key={msg.id} className="group flex gap-3 items-start hover:bg-white/5 p-2 rounded-sm transition">
+                                <div className="w-6 h-6 rounded-sm shrink-0 flex items-center justify-center text-[10px] font-bold text-black bg-[#00FF41]">
+                                    {msg.userName.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="font-bold text-[#00FF41] uppercase">{msg.userName}</span>
+                                    </div>
+                                    <p className="text-white text-sm leading-snug">{msg.text}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Input Area (Authentication စစ်ဆေးခြင်း) */}
+                    <div className="p-4 border-t-2 border-[#00FF41]/50 bg-black/50">
+                        {user ? (
+                            <div className="relative group">
+                                <input
+                                    type="text"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                                    placeholder="SEND MESSAGE..."
+                                    className="w-full bg-black/50 border-2 border-[#FF00A6]/50 rounded-lg py-3 pl-4 pr-12 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00FF41] font-mono"
+                                />
+                                <button 
+                                    onClick={handleSendMessage}
+                                    className="absolute right-2 top-2 p-2 bg-[#00FF41] rounded-lg text-black hover:bg-[#FF00A6]"
+                                >
+                                    <Send size={16} />
+                                </button>
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={handleLogin}
+                                className="w-full py-3 bg-[#FF00A6] text-white font-bold rounded-lg uppercase tracking-widest hover:bg-[#FF00A6]/80"
+                            >
+                                LOGIN TO CHAT
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // ------------------------------------
 // 1. TOP NAVBAR COMPONENT
@@ -58,7 +179,7 @@ const TopNavbar = ({ activeTab, setActiveTab }) => {
                     <img
                         src="src/assets/logo14.png"
                         alt="Website Logo"
-                        className={`w-14 h-14 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
+                        className={`w-17 h-14 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
                         onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/30x30/FF00A6/000000?text=LOGO" }}
                     />
                     ESPORTSRESTREAM
