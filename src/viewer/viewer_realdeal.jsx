@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import React, { useState, useEffect } from 'react';
+
 // Firebase Imports
 import { db, auth, provider } from '../firebase';
 import { ref, push, onValue, serverTimestamp } from 'firebase/database';
@@ -179,7 +179,7 @@ const TopNavbar = ({ activeTab, setActiveTab }) => {
                     <img
                         src="src/assets/logo14.png"
                         alt="Website Logo"
-                        className={`w-17 h-14 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
+                        className={`w-8 h-8 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
                         onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/30x30/FF00A6/000000?text=LOGO" }}
                     />
                     ESPORTSRESTREAM
@@ -218,149 +218,7 @@ const TopNavbar = ({ activeTab, setActiveTab }) => {
 };
 
 // ------------------------------------
-// 2. LIVE STREAMING PAGE COMPONENT
-// ------------------------------------
 
-const LiveStreamingPage = () => {
-    const [chatVisible, setChatVisible] = useState(true);
-
-    return (
-        <div className="flex h-[calc(100vh-80px)] p-6 gap-6 relative z-10 overflow-hidden">
-
-            {/* --- Main Video Area --- */}
-            <div className={`flex-1 flex flex-col gap-4 transition-all duration-500 ease-in-out relative ${chatVisible ? 'mr-0' : 'mr-0'}`}>
-
-                {/* Video container with sharp borders and glow */}
-                <div className={`flex-1 bg-black/80 backdrop-blur-xl border-4 border-[#00FF41]/70 rounded-lg overflow-hidden relative ${NEON_SHADOW_GREEN} group transition-all duration-300`}>
-
-                    {/* Top Overlay: Title & Info */}
-                    <div className="absolute top-0 left-0 right-0 p-6 z-20 bg-linear-to-b from-black/90 via-black/60 to-transparent pointer-events-none">
-                        <div className="flex items-start justify-between">
-                            <div className="pointer-events-auto">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <span className={`bg-red-700 ${NEON_SHADOW_GREEN} ${NEON_GREEN} text-[12px] font-extrabold px-3 py-1 rounded-sm uppercase tracking-widest animate-pulse border border-[#00FF41]`}>LIVE FEED</span>
-                                    <div className={`flex items-center gap-1.5 ${NEON_PINK_ACCENT} text-xs font-bold bg-black/70 backdrop-blur-md px-3 py-1 rounded-sm border border-[#FF00A6]/50`}>
-                                        <Gamepad2 size={12} /> LEAGUE OF LEGENDS
-                                    </div>
-                                </div>
-                                <h1 className="text-4xl font-black text-white tracking-tighter drop-shadow-xl uppercase">GRAND FINALS 2025: T1 vs GEN.G</h1>
-                                <p className="text-white/70 text-sm font-mono mt-1">MAP 3 | MATCH POINT</p>
-                            </div>
-
-                            {/* Floating Action Buttons */}
-                            <div className="flex gap-2 pointer-events-auto">
-                                <button className="bg-white/5 hover:bg-[#FF00A6]/20 backdrop-blur-md text-white p-3 rounded-lg border border-[#FF00A6]/20 transition shadow-lg hover:shadow-[0_0_10px_rgba(255,0,166,0.5)]">
-                                    <Heart size={20} className={NEON_PINK_ACCENT} />
-                                </button>
-                                <button className="bg-white/5 hover:bg-[#00FF41]/20 backdrop-blur-md text-white p-3 rounded-lg border border-[#00FF41]/20 transition shadow-lg hover:shadow-[0_0_10px_rgba(0,255,65,0.5)]">
-                                    <Settings size={20} className={NEON_GREEN} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Video Placeholder Content */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-                        <div className="text-center group-hover:scale-105 transition duration-700">
-                            <div className={`w-28 h-28 rounded-sm bg-white/5 border-4 border-[#FF00A6]/50 flex items-center justify-center backdrop-blur-sm mx-auto mb-6 shadow-[0_0_40px_rgba(255,0,166,0.3)] cursor-pointer hover:bg-black/50 hover:border-[#FF00A6] hover:scale-110 transition-all`}>
-                                <PlayCircle size={56} className={`${NEON_PINK_ACCENT} fill-transparent`} strokeWidth={1.5} />
-                            </div>
-                            <h3 className={`text-white font-bold tracking-[0.2em] text-sm uppercase ${NEON_PINK_ACCENT}`}>WAITING FOR SIGNAL</h3>
-                        </div>
-                    </div>
-
-                    {/* Bottom Controls Overlay (Sharp, Dark) */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4 z-20 bg-linear-to-t from-black/90 to-transparent flex items-end justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="flex gap-4 items-center">
-                            <button className={`text-white hover:${NEON_GREEN} transition`}><PlayCircle size={24} /></button>
-                            <button className={`text-white hover:${NEON_GREEN} transition`}><Volume2 size={24} /></button>
-                            <div className="text-white/50 text-xs font-mono border-l border-white/20 pl-4">00:00 / LIVE</div>
-                        </div>
-
-                        <div className="flex gap-4 items-center">
-                            {/* THE CHAT TOGGLE BUTTON ON VIDEO */}
-                            <button
-                                onClick={() => setChatVisible(!chatVisible)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-xs font-bold transition backdrop-blur-md shadow-lg
-                                ${chatVisible
-                                        ? `bg-[#FF00A6]/80 border-[#FF00A6] text-white ${NEON_SHADOW_GREEN}`
-                                        : 'bg-black/60 border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
-                                    }
-                                `}
-                            >
-                                {chatVisible ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
-                                {chatVisible ? 'HIDE CHAT' : 'SHOW CHAT'}
-                            </button>
-                            <button className={`text-white hover:${NEON_GREEN} transition`}><Maximize2 size={20} /></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* --- Right Column: Chat (Redesigned) --- */}
-            <div
-                className={`
-            transition-all duration-500 ease-in-out overflow-hidden
-            ${chatVisible ? 'w-96 opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-10 p-0'}
-         `}
-            >
-                <div className={`h-full bg-black/80 backdrop-blur-2xl border-4 border-[#FF00A6]/70 rounded-lg flex flex-col shadow-[0_0_15px_rgba(255,0,166,0.4)] relative overflow-hidden`}>
-                    {/* Chat Header */}
-                    <div className="flex justify-between items-center p-4 border-b-2 border-[#FF00A6]/50 bg-black/50">
-                        <h2 className={`text-lg font-black uppercase text-white flex items-center gap-2 ${NEON_PINK_ACCENT}`}>
-                            <MessageSquare size={18} /> LIVE CHAT FEED
-                        </h2>
-                        <button onClick={() => setChatVisible(false)} className="text-white/50 hover:text-[#00FF41]">
-                            <PanelRightClose size={18} />
-                        </button>
-                    </div>
-
-                    {/* Chat Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar text-xs font-mono">
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                            <div key={i} className="group flex gap-3 items-start hover:bg-white/5 p-2 rounded-sm transition border-l-2 border-transparent hover:border-[#00FF41]/50">
-                                <div className={`w-6 h-6 rounded-sm shrink-0 flex items-center justify-center text-[10px] font-bold text-black ${i % 2 === 0 ? 'bg-[#00FF41]' : 'bg-[#FF00A6]'} shadow-lg`}>
-                                    {i % 2 === 0 ? 'G' : 'P'}
-                                </div>
-                                <div>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className={`font-bold ${i % 2 === 0 ? NEON_GREEN : NEON_PINK_ACCENT}`}>USER_00{i}</span>
-                                        <span className="text-[10px] text-white/30">2m AGO</span>
-                                    </div>
-                                    <p className="text-white text-sm leading-snug">
-                                        {i % 2 === 0 ? 'THIS PLAY WAS ABSOLUTELY INSANE!' : 'CAN THEY ACTUALLY COME BACK FROM THIS DEFICIT?'}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Input Area */}
-                    <div className="p-4 border-t-2 border-[#00FF41]/50 bg-black/50">
-                        <div className="relative group">
-                            <input
-                                type="text"
-                                placeholder="SEND MESSAGE..."
-                                className={`w-full bg-black/50 border-2 border-[#FF00A6]/50 rounded-lg py-3 pl-4 pr-12 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00FF41] transition shadow-inner shadow-black/70 font-mono`}
-                            />
-                            <button className={`absolute right-2 top-2 p-2 bg-[#00FF41] rounded-lg text-black hover:bg-[#FF00A6] transition shadow-lg shadow-[#00FF41]/30 group-focus-within:scale-105`}>
-                                <Send size={16} />
-                            </button>
-                        </div>
-                        <div className="flex justify-between items-center mt-2 px-1">
-                            <span className="text-[10px] text-white/30 font-bold uppercase tracking-wider">SLOW MODE: 3S</span>
-                            <div className={`flex gap-2 text-white/40`}>
-                                <Heart size={14} className={`hover:${NEON_PINK_ACCENT} cursor-pointer transition`} />
-                                <Trophy size={14} className={`hover:${NEON_GREEN} cursor-pointer transition`} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    );
-};
 
 // ------------------------------------
 // 3. CASTER HUB DATA & COMPONENTS (from viewer_caster.jsx)
