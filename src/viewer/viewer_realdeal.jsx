@@ -34,6 +34,13 @@ import {
     Lock,
     CheckCircle,
     Image,
+    Menu, 
+    Home, 
+    CalendarDays, 
+    Hash, 
+    LogOut, 
+    History, 
+    CreditCard
 } from 'lucide-react';
 
 // --- Global Neon Classes ---
@@ -239,63 +246,126 @@ const LiveStreamingPage = () => {
 };
 
 
+
+
 // ------------------------------------
-// 1. TOP NAVBAR COMPONENT
+// NEW PAGES (Home, Schedule, Profile)
 // ------------------------------------
 
-const TopNavbar = ({ activeTab, setActiveTab }) => {
-    const navItems = [
-        { id: 'live', label: 'LIVE VIEW', icon: PlayCircle },
-        { id: 'caster', label: 'CASTER HUB', icon: Mic2 },
-        { id: 'restreamer', label: 'VOD/RESTREAMS', icon: Repeat },
+const HomePage = () => (
+    <div className="p-8 h-full overflow-y-auto">
+        <div className="w-full h-64 bg-linear-to-r from-[#FF00A6]/20 to-[#00FF41]/20 border-2 border-[#00FF41]/50 rounded-xl flex flex-col items-center justify-center shadow-[0_0_20px_rgba(0,255,65,0.2)] mb-8">
+            <h1 className="text-5xl font-black text-white uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(255,0,166,0.5)]">
+                WELCOME TO <span className="text-[#00FF41]">ESPORTRESTREAM</span>
+            </h1>
+            <p className="text-white/60 mt-4 font-mono">YOUR ULTIMATE HUB FOR LIVE ESPORTS & VODS</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+                <div key={i} className="bg-black/50 border border-white/10 p-4 rounded-lg hover:border-[#FF00A6]/50 transition cursor-pointer group">
+                    <div className="h-40 bg-white/5 rounded-sm mb-4 flex items-center justify-center group-hover:bg-[#FF00A6]/10 transition">
+                        <PlayCircle size={40} className="text-[#FF00A6] opacity-50 group-hover:opacity-100" />
+                    </div>
+                    <h3 className="text-white font-bold uppercase">TRENDING MATCH 0{i}</h3>
+                    <p className="text-[#00FF41] text-xs font-mono mt-1">12.5K VIEWERS</p>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+const TournamentSchedulePage = () => {
+    const [selectedTag, setSelectedTag] = useState('');
+    
+    // Streamer တွေ တင်ထားတဲ့ Post (Mock Data)
+    const posts = [
+        { id: 1, author: "Mr. Yikee", content: "Don't miss the X.Borg insane plays tomorrow! Grand Finals are going to be fire. Catch me live!", tag: "#MLBB", time: "Tomorrow, 8:00 PM" },
+        { id: 2, author: "Mr. Alex", content: "PMCL biggest tournament matches starting this weekend. YG is ready to defend their title!", tag: "#PUBG", time: "Saturday, 2:00 PM" },
+        { id: 3, author: "Ms. Elena", content: "Analyzing the drafting phase for the M7 Championship. Who will dominate the mid lane?", tag: "#MLBB", time: "Friday, 5:00 PM" },
+        { id: 4, author: "Mr. Lamar", content: "Valorant Champions Tour Regional Qualifiers. Let's go!", tag: "#VALORANT", time: "Sunday, 1:00 PM" }
     ];
 
+    const filteredPosts = selectedTag ? posts.filter(p => p.tag === selectedTag) : posts;
+
     return (
-        <nav className="p-4 flex justify-between items-center z-50 bg-[#111111] border-b-4 border-b-[#00FF41]/50 shadow-2xl shadow-black/50">
-            <div className="flex items-center gap-6">
-                <div className={`text-3xl font-black uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(0,255,65,0.4)] ${NEON_GREEN} flex items-center gap-2`}>
-                    {/* Image Session Placeholder: Replace the src below with your logo URL */}
-                    <img
-                        src="src/assets/logo14.png"
-                        alt="Website Logo"
-                        className={`w-14 h-12 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
-                        onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/30x30/FF00A6/000000?text=LOGO" }}
-                    />
-                    ESPORTSRESTREAM
-                </div>
-                {navItems.map((item) => (
-                    <button
-                        key={item.id}
-                        onClick={() => setActiveTab(item.id)}
-                        className={`
-                            flex items-center gap-2 px-4 py-2 text-sm font-bold uppercase transition
-                            border-b-2
-                            ${activeTab === item.id
-                                ? `${NEON_PINK} border-[#FF00A6] shadow-[0_4px_10px_rgba(255,0,166,0.3)]`
-                                : 'text-white/50 border-transparent hover:text-white/90 hover:border-white/20'
-                            }
-                        `}
-                    >
-                        <item.icon size={18} />
-                        {item.label}
-                    </button>
+        <div className="p-8 h-full overflow-y-auto">
+            <h2 className="text-3xl font-black text-white uppercase mb-6 flex items-center gap-3">
+                <CalendarDays className="text-[#00FF41]" /> TOURNAMENT SCHEDULE
+            </h2>
+            
+            {/* Hashtag Search / Filter */}
+            <div className="mb-8 p-4 bg-black/60 border-2 border-[#FF00A6]/50 rounded-lg flex items-center gap-4">
+                <Hash className="text-[#FF00A6]" />
+                <select 
+                    value={selectedTag} 
+                    onChange={(e) => setSelectedTag(e.target.value)}
+                    className="bg-transparent text-white font-bold uppercase outline-none flex-1 cursor-pointer"
+                >
+                    <option value="" className="bg-black">ALL GAMES (SHOW ALL)</option>
+                    <option value="#MLBB" className="bg-black">#MLBB (MOBILE LEGENDS)</option>
+                    <option value="#PUBG" className="bg-black">#PUBG (PLAYERUNKNOWN'S BATTLEGROUNDS)</option>
+                    <option value="#VALORANT" className="bg-black">#VALORANT</option>
+                </select>
+            </div>
+
+            {/* Streamer Posts */}
+            <div className="space-y-4">
+                {filteredPosts.map(post => (
+                    <div key={post.id} className="bg-black/80 border border-[#00FF41]/30 p-6 rounded-lg hover:border-[#00FF41] transition">
+                        <div className="flex justify-between items-start mb-3">
+                            <span className="text-white font-bold flex items-center gap-2"><User size={16} className="text-[#00FF41]"/> {post.author}</span>
+                            <span className="text-[#FF00A6] text-xs font-mono bg-[#FF00A6]/10 px-2 py-1 rounded">{post.time}</span>
+                        </div>
+                        <p className="text-white/80 mb-4">{post.content}</p>
+                        <span className="text-[#00FF41] font-bold text-sm">{post.tag}</span>
+                    </div>
                 ))}
+                {filteredPosts.length === 0 && <p className="text-white/50 italic">No schedules found for this game.</p>}
             </div>
-            <div className="flex items-center gap-4 text-white">
-                <button className={`p-3 rounded-lg bg-[#222222] border border-white/10 text-white/70 hover:${NEON_GREEN} hover:border-[#00FF41] transition shadow-inner shadow-black/50`}>
-                    <Search size={20} />
-                </button>
-                <button className={`p-3 rounded-lg bg-[#222222] border border-white/10 text-white/70 hover:${NEON_PINK} hover:border-[#FF00A6] transition shadow-inner shadow-black/50`}>
-                    <Bell size={20} />
-                </button>
-                <div className={`w-10 h-10 rounded-full bg-white/20 border-2 border-[#00FF41] flex items-center justify-center text-sm font-bold`}>
-                    <User size={20} className={NEON_GREEN} />
-                </div>
-            </div>
-        </nav>
+        </div>
     );
 };
 
+const UserProfilePage = () => (
+    <div className="p-8 h-full overflow-y-auto">
+        <h2 className="text-3xl font-black text-white uppercase mb-8 flex items-center gap-3">
+            <User className="text-[#FF00A6]" /> USER DASHBOARD
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-black/60 border-2 border-[#00FF41]/50 p-6 rounded-lg">
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="w-20 h-20 bg-[#00FF41]/20 rounded-full border-2 border-[#00FF41] flex items-center justify-center">
+                        <User size={40} className="text-[#00FF41]" />
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-bold text-white uppercase">GUEST_USER</h3>
+                        <p className="text-[#FF00A6] text-sm font-mono mt-1">BASIC TIER</p>
+                    </div>
+                </div>
+                <button className="w-full py-3 bg-[#FF00A6] text-white font-bold rounded-lg uppercase tracking-widest hover:bg-[#FF00A6]/80 transition flex justify-center items-center gap-2">
+                    <CreditCard size={18} /> UPGRADE TO PREMIUM
+                </button>
+            </div>
+
+            <div className="bg-black/60 border border-white/10 p-6 rounded-lg">
+                <h3 className="text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
+                    <History size={18} className="text-[#00FF41]" /> WATCH HISTORY
+                </h3>
+                <div className="space-y-3">
+                    <div className="p-3 bg-white/5 rounded flex justify-between items-center text-sm">
+                        <span className="text-white/80">T1 vs GEN.G (Grand Finals)</span>
+                        <span className="text-white/40 font-mono">2 HRS AGO</span>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded flex justify-between items-center text-sm">
+                        <span className="text-white/80">PMCL Highlights - YG Winning Moment</span>
+                        <span className="text-white/40 font-mono">1 DAY AGO</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
 // ------------------------------------
 
 
@@ -877,31 +947,119 @@ const RestreamPage = () => {
 // ------------------------------------
 
 export default function App() {
-    const [activeTab, setActiveTab] = useState('live');
+    const [activeTab, setActiveTab] = useState('home');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    const navItems = [
+        { id: 'home', label: 'HOME', icon: Home },
+        { id: 'live', label: 'LIVE VIEW', icon: PlayCircle },
+        { id: 'schedule', label: 'SCHEDULE', icon: CalendarDays },
+        { id: 'caster', label: 'CASTER HUB', icon: Mic2 },
+        { id: 'restreamer', label: 'VOD / RESTREAMS', icon: Repeat },
+        { id: 'profile', label: 'PROFILE', icon: User },
+    ];
 
     return (
-        <div className="h-dvh w-screen overflow-hidden font-sans text-slate-200 relative selection:bg-[#FF00A6] selection:text-white bg-black">
-            {/* Background with Dark, Geometric Theme */}
-            <div className="absolute inset-0 bg-black z-0 overflow-hidden">
-                {/* Neon Grid Effect */}
-                <div className="absolute inset-0 bg-repeat bg-size-[20px_20px] opacity-10" style={{ backgroundImage: 'linear-gradient(to right, #00FF4120 1px, transparent 1px), linear-gradient(to bottom, #00FF4120 1px, transparent 1px)' }}></div>
-                {/* Sharp Geometric Shapes (like in the video) */}
-                <div className="absolute top-0 left-0 w-64 h-64 border-4 border-[#00FF41] opacity-30 transform -translate-x-1/2 -translate-y-1/2 rotate-45"></div>
-                <div className="absolute bottom-0 right-0 w-48 h-48 border-4 border-[#FF00A6] opacity-30 transform translate-x-1/2 translate-y-1/2 rotate-45"></div>
-                <div className="absolute top-1/2 left-1/2 w-48 h-48 border-2 border-[#00FF41] opacity-20 transform -translate-x-1/2 -translate-y-1/2"></div>
-            </div>
+        <div className="h-dvh w-screen overflow-hidden font-sans text-slate-200 bg-black flex flex-col">
+            
+            {/* --- 1. PERSISTENT TOP HEADER --- */}
+            <header className="h-16 flex items-center justify-between px-4 bg-[#111111] border-b-2 border-[#00FF41]/50 shadow-md shadow-black/50 z-50 shrink-0">
+                <div className="flex items-center gap-4">
+                    {/* Hamburger Menu */}
+                    <button 
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                        className="p-2 text-white/70 hover:text-[#00FF41] transition bg-white/5 rounded-md"
+                    >
+                        <Menu size={24} />
+                    </button>
+                    
+                    {/* Logo (Smaller for Header) */}
+                    <div className="text-xl font-black uppercase tracking-tighter text-[#00FF41] flex items-center gap-2 hidden md:flex">
+    <img 
+        src="src/assets/logo14.png" 
+        alt="EsportRestream Logo" 
+        className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]" 
+    />
+    ESPORTSRESTREAM
+</div>
+                </div>
 
-            {/* Content */}
-            <div className="relative z-10 flex flex-col h-full">
+                {/* Persistent Search Bar */}
+                <div className="flex-1 max-w-xl px-4">
+                    <div className="relative group">
+                        <input 
+                            type="text" 
+                            placeholder="SEARCH STREAMS, TOURNAMENTS, CASTERS..." 
+                            className="w-full bg-[#222222] border border-white/20 rounded-full py-2 pl-12 pr-4 text-white placeholder-white/50 focus:outline-none focus:border-[#00FF41] focus:ring-1 focus:ring-[#00FF41] transition text-sm font-mono"
+                        />
+                        <Search size={18} className="absolute left-4 top-2.5 text-white/50 group-focus-within:text-[#00FF41] transition" />
+                    </div>
+                </div>
 
-                <TopNavbar activeTab={activeTab} setActiveTab={setActiveTab} />
+                <div className="flex items-center gap-3">
+                    <button className="p-2 text-white/70 hover:text-[#FF00A6] transition"><Bell size={20} /></button>
+                    <div onClick={() => setActiveTab('profile')} className="w-8 h-8 rounded-full bg-white/20 border border-[#00FF41] flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
+                        <User size={16} className="text-[#00FF41]" />
+                    </div>
+                </div>
+            </header>
 
+            {/* --- 2. MAIN LAYOUT (Sidebar + Content) --- */}
+            <div className="flex-1 flex overflow-hidden relative z-10">
+                
+                {/* Sidebar */}
+                <aside className={`
+                    bg-[#111111] border-r border-white/10 transition-all duration-300 ease-in-out flex flex-col shrink-0
+                    ${isSidebarOpen ? 'w-64' : 'w-16'}
+                `}>
+                    <div className="flex-1 py-4 flex flex-col gap-2 px-2">
+                        {navItems.map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveTab(item.id)}
+                                className={`
+                                    flex items-center gap-4 px-3 py-3 rounded-lg font-bold transition whitespace-nowrap overflow-hidden
+                                    ${activeTab === item.id 
+                                        ? 'bg-[#FF00A6]/20 text-[#FF00A6] border border-[#FF00A6]/50' 
+                                        : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                    }
+                                `}
+                                title={!isSidebarOpen ? item.label : ""}
+                            >
+                                <item.icon size={20} className="shrink-0" />
+                                <span className={`text-sm uppercase tracking-wider transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
+                                    {item.label}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                    {/* Bottom Logout Button */}
+                    <div className="p-2 border-t border-white/10">
+                        <button className="w-full flex items-center gap-4 px-3 py-3 rounded-lg text-white/50 hover:text-red-500 hover:bg-red-500/10 transition overflow-hidden">
+                            <LogOut size={20} className="shrink-0" />
+                            <span className={`text-sm font-bold uppercase transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>LOGOUT</span>
+                        </button>
+                    </div>
+                </aside>
 
-                <main className="flex-1 min-h-0">
-                    {activeTab === 'live' && <LiveStreamingPage />}
-                    {activeTab === 'caster' && <CasterPage />}
-                    {activeTab === 'restreamer' && <RestreamPage />}
+                {/* Main Content Area */}
+                <main className="flex-1 h-full overflow-hidden relative">
+                    {/* Background Effects */}
+                    <div className="absolute inset-0 pointer-events-none z-0">
+                        <div className="absolute inset-0 bg-repeat bg-size-[20px_20px] opacity-10" style={{ backgroundImage: 'linear-gradient(to right, #00FF4120 1px, transparent 1px), linear-gradient(to bottom, #00FF4120 1px, transparent 1px)' }}></div>
+                    </div>
+                    
+                    {/* Render Active Page */}
+                    <div className="relative z-10 h-full w-full">
+                        {activeTab === 'home' && <HomePage />}
+                        {activeTab === 'live' && <LiveStreamingPage />}
+                        {activeTab === 'schedule' && <TournamentSchedulePage />}
+                        {activeTab === 'caster' && <CasterPage />}
+                        {activeTab === 'restreamer' && <RestreamPage />}
+                        {activeTab === 'profile' && <UserProfilePage />}
+                    </div>
                 </main>
+
             </div>
         </div>
     );
