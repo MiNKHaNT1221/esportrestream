@@ -6,6 +6,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 const firebaseConfig = {
   apiKey: "AIzaSyC-HQNlA0aXHVi6mtc3umgBWilLEY5TRa0",
   authDomain: "esportrestream.firebaseapp.com",
+  databaseURL:"https://esportrestream-default-rtdb.asia-southeast1.firebasedatabase.app/",
   projectId: "esportrestream",
   storageBucket: "esportrestream.firebasestorage.app",
   messagingSenderId: "222041071995",

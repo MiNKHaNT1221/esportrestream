@@ -44,11 +44,13 @@ const NEON_SHADOW_GREEN = 'shadow-[0_0_15px_rgba(0,255,65,0.6)]';
 const NEON_SHADOW_PINK = 'shadow-[0_0_15px_rgba(255,0,166,0.6)]';
 
 const LiveStreamingPage = () => {
+    // 1. Firebase နှင့် Chat အတွက် State များ
     const [chatVisible, setChatVisible] = useState(true);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [user, setUser] = useState(null);
 
+    // 2. User Login အခြေအနေကို စစ်ဆေးခြင်း
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
@@ -56,6 +58,7 @@ const LiveStreamingPage = () => {
         return () => unsubscribe();
     }, []);
 
+    // 3. Firebase မှ ဒေတာများကို အချိန်နှင့်တစ်ပြေးညီ (Realtime) ယူခြင်း
     useEffect(() => {
         const chatRef = ref(db, 'liveChat');
         onValue(chatRef, (snapshot) => {
@@ -71,6 +74,8 @@ const LiveStreamingPage = () => {
             }
         });
     }, []);
+
+    // 4. Google ဖြင့် Login ဝင်ခြင်း
     const handleLogin = async () => {
         try {
             await signInWithPopup(auth, provider);
@@ -78,6 +83,8 @@ const LiveStreamingPage = () => {
             console.error("Login Error:", error);
         }
     };
+
+    // 5. Firebase သို့ စာပို့ခြင်း
     const handleSendMessage = () => {
         if (newMessage.trim() === '' || !user) return;
         
@@ -88,41 +95,113 @@ const LiveStreamingPage = () => {
             userName: user.displayName || 'Anonymous',
             timestamp: serverTimestamp()
         });
-        setNewMessage('');
+        setNewMessage(''); // စာပို့ပြီးရင် Box ကို ပြန်ရှင်းမယ်
     };
+
     return (
         <div className="flex h-[calc(100vh-80px)] p-6 gap-6 relative z-10 overflow-hidden">
-            {/* ... (Video Player အပိုင်း အရင်အတိုင်း ထားပါ) ... */}
-            
-            {/* --- Right Column: Chat (Redesigned with Logic) --- */}
+            {/* --- Main Video Area (မူလဒီဇိုင်းအတိုင်း) --- */}
+            <div className={`flex-1 flex flex-col gap-4 transition-all duration-500 ease-in-out relative ${chatVisible ? 'mr-0' : 'mr-0'}`}>
+                <div className={`flex-1 bg-black/80 backdrop-blur-xl border-4 border-[#00FF41]/70 rounded-lg overflow-hidden relative shadow-[0_0_15px_rgba(0,255,65,0.6)] group transition-all duration-300`}>
+                    
+                    {/* Top Overlay */}
+                    <div className="absolute top-0 left-0 right-0 p-6 z-20 bg-linear-to-b from-black/90 via-black/60 to-transparent pointer-events-none">
+                        <div className="flex items-start justify-between">
+                            <div className="pointer-events-auto">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className={`bg-red-700 shadow-[0_0_15px_rgba(0,255,65,0.6)] text-[#00FF41] text-[12px] font-extrabold px-3 py-1 rounded-sm uppercase tracking-widest animate-pulse border border-[#00FF41]`}>LIVE FEED</span>
+                                    <div className={`flex items-center gap-1.5 text-[#FF00A6] text-xs font-bold bg-black/70 backdrop-blur-md px-3 py-1 rounded-sm border border-[#FF00A6]/50`}>
+                                        <Gamepad2 size={12} /> LEAGUE OF LEGENDS
+                                    </div>
+                                </div>
+                                <h1 className="text-4xl font-black text-white tracking-tighter drop-shadow-xl uppercase">GRAND FINALS 2025: T1 vs GEN.G</h1>
+                                <p className="text-white/70 text-sm font-mono mt-1">MAP 3 | MATCH POINT</p>
+                            </div>
+                            <div className="flex gap-2 pointer-events-auto">
+                                <button className="bg-white/5 hover:bg-[#FF00A6]/20 backdrop-blur-md text-white p-3 rounded-lg border border-[#FF00A6]/20 transition shadow-lg hover:shadow-[0_0_10px_rgba(255,0,166,0.5)]">
+                                    <Heart size={20} className="text-[#FF00A6]" />
+                                </button>
+                                <button className="bg-white/5 hover:bg-[#00FF41]/20 backdrop-blur-md text-white p-3 rounded-lg border border-[#00FF41]/20 transition shadow-lg hover:shadow-[0_0_10px_rgba(0,255,65,0.5)]">
+                                    <Settings size={20} className="text-[#00FF41]" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Video Placeholder Content */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                        <div className="text-center group-hover:scale-105 transition duration-700">
+                            <div className={`w-28 h-28 rounded-sm bg-white/5 border-4 border-[#FF00A6]/50 flex items-center justify-center backdrop-blur-sm mx-auto mb-6 shadow-[0_0_40px_rgba(255,0,166,0.3)] cursor-pointer hover:bg-black/50 hover:border-[#FF00A6] hover:scale-110 transition-all`}>
+                                <PlayCircle size={56} className={`text-[#FF00A6] fill-transparent`} strokeWidth={1.5} />
+                            </div>
+                            <h3 className={`text-white font-bold tracking-[0.2em] text-sm uppercase text-[#FF00A6]`}>WAITING FOR SIGNAL</h3>
+                        </div>
+                    </div>
+
+                    {/* Bottom Controls Overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 z-20 bg-linear-to-t from-black/90 to-transparent flex items-end justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="flex gap-4 items-center">
+                            <button className={`text-white hover:text-[#00FF41] transition`}><PlayCircle size={24} /></button>
+                            <button className={`text-white hover:text-[#00FF41] transition`}><Volume2 size={24} /></button>
+                            <div className="text-white/50 text-xs font-mono border-l border-white/20 pl-4">00:00 / LIVE</div>
+                        </div>
+                        <div className="flex gap-4 items-center">
+                            <button
+                                onClick={() => setChatVisible(!chatVisible)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-xs font-bold transition backdrop-blur-md shadow-lg
+                                ${chatVisible
+                                        ? `bg-[#FF00A6]/80 border-[#FF00A6] text-white shadow-[0_0_15px_rgba(0,255,65,0.6)]`
+                                        : 'bg-black/60 border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
+                                    }
+                                `}
+                            >
+                                {chatVisible ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
+                                {chatVisible ? 'HIDE CHAT' : 'SHOW CHAT'}
+                            </button>
+                            <button className={`text-white hover:text-[#00FF41] transition`}><Maximize2 size={20} /></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- Right Column: Chat (Firebase ချိတ်ဆက်ပြီး) --- */}
             <div className={`transition-all duration-500 ease-in-out overflow-hidden ${chatVisible ? 'w-96 opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-10 p-0'}`}>
-                <div className="h-full bg-black/80 backdrop-blur-2xl border-4 border-[#FF00A6]/70 rounded-lg flex flex-col shadow-[0_0_15px_rgba(255,0,166,0.4)] relative overflow-hidden">
+                <div className={`h-full bg-black/80 backdrop-blur-2xl border-4 border-[#FF00A6]/70 rounded-lg flex flex-col shadow-[0_0_15px_rgba(255,0,166,0.4)] relative overflow-hidden`}>
                     
                     {/* Chat Header */}
                     <div className="flex justify-between items-center p-4 border-b-2 border-[#FF00A6]/50 bg-black/50">
-                        <h2 className="text-lg font-black uppercase text-white flex items-center gap-2 text-[#FF00A6]">
+                        <h2 className={`text-lg font-black uppercase text-white flex items-center gap-2 text-[#FF00A6]`}>
                             <MessageSquare size={18} /> LIVE CHAT
                         </h2>
-                        {user ? (
-                            <button onClick={() => signOut(auth)} className="text-xs text-white/50 hover:text-red-500">LOGOUT</button>
-                        ) : null}
+                        <div className="flex items-center gap-3">
+                            {user && (
+                                <button onClick={() => signOut(auth)} className="text-xs text-white/50 hover:text-red-500 font-bold tracking-wider">LOGOUT</button>
+                            )}
+                            <button onClick={() => setChatVisible(false)} className="text-white/50 hover:text-[#00FF41]">
+                                <PanelRightClose size={18} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Chat Messages Rendering */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar text-xs font-mono">
-                        {messages.map((msg, idx) => (
-                            <div key={msg.id} className="group flex gap-3 items-start hover:bg-white/5 p-2 rounded-sm transition">
-                                <div className="w-6 h-6 rounded-sm shrink-0 flex items-center justify-center text-[10px] font-bold text-black bg-[#00FF41]">
-                                    {msg.userName.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="font-bold text-[#00FF41] uppercase">{msg.userName}</span>
+                        {messages.length === 0 ? (
+                            <p className="text-[#00FF41]/70 text-center mt-4 uppercase">No messages yet. Be the first to chat!</p>
+                        ) : (
+                            messages.map((msg) => (
+                                <div key={msg.id} className="group flex gap-3 items-start hover:bg-white/5 p-2 rounded-sm transition border-l-2 border-transparent hover:border-[#00FF41]/50">
+                                    <div className="w-6 h-6 rounded-sm shrink-0 flex items-center justify-center text-[10px] font-bold text-black bg-[#00FF41] shadow-lg">
+                                        {msg.userName.charAt(0).toUpperCase()}
                                     </div>
-                                    <p className="text-white text-sm leading-snug">{msg.text}</p>
+                                    <div>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="font-bold text-[#00FF41] uppercase">{msg.userName}</span>
+                                        </div>
+                                        <p className="text-white text-sm leading-snug break-words">{msg.text}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
 
                     {/* Input Area (Authentication စစ်ဆေးခြင်း) */}
@@ -135,11 +214,11 @@ const LiveStreamingPage = () => {
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                                     placeholder="SEND MESSAGE..."
-                                    className="w-full bg-black/50 border-2 border-[#FF00A6]/50 rounded-lg py-3 pl-4 pr-12 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00FF41] font-mono"
+                                    className="w-full bg-black/50 border-2 border-[#FF00A6]/50 rounded-lg py-3 pl-4 pr-12 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00FF41] font-mono shadow-inner shadow-black/70"
                                 />
                                 <button 
                                     onClick={handleSendMessage}
-                                    className="absolute right-2 top-2 p-2 bg-[#00FF41] rounded-lg text-black hover:bg-[#FF00A6]"
+                                    className="absolute right-2 top-2 p-2 bg-[#00FF41] rounded-lg text-black hover:bg-[#FF00A6] transition shadow-lg shadow-[#00FF41]/30 group-focus-within:scale-105"
                                 >
                                     <Send size={16} />
                                 </button>
@@ -147,7 +226,7 @@ const LiveStreamingPage = () => {
                         ) : (
                             <button 
                                 onClick={handleLogin}
-                                className="w-full py-3 bg-[#FF00A6] text-white font-bold rounded-lg uppercase tracking-widest hover:bg-[#FF00A6]/80"
+                                className="w-full py-3 bg-[#FF00A6] text-white font-bold rounded-lg uppercase tracking-widest hover:bg-[#FF00A6]/80 transition shadow-lg shadow-[#FF00A6]/30"
                             >
                                 LOGIN TO CHAT
                             </button>
@@ -179,7 +258,7 @@ const TopNavbar = ({ activeTab, setActiveTab }) => {
                     <img
                         src="src/assets/logo14.png"
                         alt="Website Logo"
-                        className={`w-8 h-8 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
+                        className={`w-14 h-12 rounded-full border-2 border-[#FF00A6] drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]`}
                         onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/30x30/FF00A6/000000?text=LOGO" }}
                     />
                     ESPORTSRESTREAM
