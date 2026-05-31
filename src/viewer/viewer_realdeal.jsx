@@ -820,7 +820,7 @@ const RestreamPage = () => {
                         {/* jfKfPfyJRdk နေရာတွင် မိမိပြချင်သော Video ID ထည့်ပါ */}
                         <iframe 
                             className="w-full h-full pointer-events-auto"
-                            src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1" 
+                            src="https://www.youtube.com/live/kl1Xjqg7NIY?si=GZRToD9ffB5yREkd" 
                             title="Live Stream Video" 
                             frameBorder="0" 
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
