@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 // Firebase Imports
 import { db, auth, provider } from '../firebase';
-import { ref, push, onValue, serverTimestamp } from 'firebase/database';
+import { ref, push, onValue, serverTimestamp, get, set } from 'firebase/database';
 import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import {
     PlayCircle,
@@ -40,7 +40,10 @@ import {
     Hash, 
     LogOut, 
     History, 
-    CreditCard
+    CreditCard,
+    Video,
+    Shield, 
+    LogIn
 } from 'lucide-react';
 
 // --- Global Neon Classes ---
@@ -788,95 +791,59 @@ const RestreamPage = () => {
     };
 
     return (
-        <div className="flex h-[calc(100vh-80px)] p-6 gap-6 relative z-10">
+        <div className={`flex-1 flex flex-col gap-4 transition-all duration-500 ease-in-out relative ${chatVisible ? 'mr-0' : 'mr-0'}`}>
             {/* --- Video & Info --- */}
-            <div className="flex-1 flex flex-col gap-6">
-
-                {/* Video container with sharp borders and glow */}
-                <div className={`relative flex-1 bg-black/80 border-4 border-[#FF00A6]/70 rounded-lg overflow-hidden group ${NEON_SHADOW_PINK} transition-all duration-300`}>
-
-                    {/* Video Placeholder */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-                        <div className="text-center">
-                            <PlayCircle size={72} className={`${NEON_PINK} mx-auto fill-transparent transition-all duration-500`} strokeWidth={1.5} />
-                            <p className={`mt-4 ${NEON_PINK} font-bold tracking-wide uppercase`}>{MOCK_VOD}</p>
-                        </div>
-                    </div>
-
-                    {/* Ad Overlay */}
-                    {showAd && !subscribed && (
-                        <div className="absolute inset-0 bg-black/95 z-30 flex items-center justify-center">
-                            <div className="text-center space-y-4 p-8 border-4 border-[#00FF41] rounded-lg shadow-2xl shadow-[#00FF41]/40">
-                                <p className="text-2xl font-black text-white uppercase">SPONSORED AD INTERRUPT</p>
-                                <p className={`${NEON_GREEN} font-mono`}>SUBSCRIBE TO REMOVE ADS INSTANTLY</p>
-                                <button
-                                    onClick={() => setSubscribed(true)}
-                                    className="px-6 py-2 rounded-lg bg-[#00FF41] text-black font-black uppercase tracking-widest hover:bg-[#FF00A6] hover:text-white transition shadow-lg shadow-[#00FF41]/30"
-                                >
-                                    SUBSCRIBE NOW
+            <div className={`flex-1 bg-black border-4 border-[#00FF41]/70 rounded-lg overflow-hidden relative shadow-[0_0_15px_rgba(0,255,65,0.6)] group transition-all duration-300`}>
+                    
+                    {/* Top Overlay (Title & Info) */}
+                    <div className="absolute top-0 left-0 right-0 p-6 z-20 bg-linear-to-b from-black/90 via-black/60 to-transparent pointer-events-none">
+                        <div className="flex items-start justify-between">
+                            <div className="pointer-events-auto">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className={`bg-red-700 shadow-[0_0_15px_rgba(0,255,65,0.6)] text-[#00FF41] text-[12px] font-extrabold px-3 py-1 rounded-sm uppercase tracking-widest animate-pulse border border-[#00FF41]`}>LIVE FEED</span>
+                                    <div className={`flex items-center gap-1.5 text-[#FF00A6] text-xs font-bold bg-black/70 backdrop-blur-md px-3 py-1 rounded-sm border border-[#FF00A6]/50`}>
+                                        <Gamepad2 size={12} /> LEAGUE OF LEGENDS
+                                    </div>
+                                </div>
+                                <h1 className="text-4xl font-black text-white tracking-tighter drop-shadow-xl uppercase">GRAND FINALS: TOURNAMENT MATCH</h1>
+                            </div>
+                            <div className="flex gap-2 pointer-events-auto">
+                                <button className="bg-black/50 hover:bg-[#FF00A6]/20 backdrop-blur-md text-white p-3 rounded-lg border border-[#FF00A6]/50 transition shadow-lg hover:shadow-[0_0_10px_rgba(255,0,166,0.5)]">
+                                    <Heart size={20} className="text-[#FF00A6]" />
                                 </button>
                             </div>
                         </div>
-                    )}
-
-                    {/* Controls */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between bg-linear-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition">
-                        <div className="flex items-center gap-4 text-white">
-                            <PlayCircle size={24} className={`hover:${NEON_GREEN}`} />
-                            <Volume2 size={24} className={`hover:${NEON_GREEN}`} />
-                            <div className='flex items-center gap-1'>
-                                <span className='text-white/50 text-xs uppercase'>QUALITY:</span>
-                                {premium ? (
-                                    <select className={`bg-black/50 border border-[#00FF41]/50 rounded-sm px-2 text-white text-xs ${NEON_GREEN} focus:ring-1 focus:ring-[#00FF41] cursor-pointer`}>
-                                        <option className='bg-black'>1080p</option>
-                                        <option className='bg-black'>4K (Premium)</option>
-                                    </select>
-                                ) : (
-                                    <Lock size={16} className="text-white/40 ml-2" />
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-white">
-                            <div className='flex items-center gap-1'>
-                                <span className='text-white/50 text-xs uppercase'>SPEED:</span>
-                                {premium ? (
-                                    <select className={`bg-black/50 border border-[#00FF41]/50 rounded-sm px-2 text-white text-xs ${NEON_GREEN} focus:ring-1 focus:ring-[#00FF41] cursor-pointer`}>
-                                        <option className='bg-black'>1x</option>
-                                        <option className='bg-black'>1.5x</option>
-                                        <option className='bg-black'>2x (Premium)</option>
-                                    </select>
-                                ) : (
-                                    <Lock size={16} className="text-white/40 ml-2" />
-                                )}
-                            </div>
-                            <Settings size={20} className={`hover:${NEON_GREEN}`} />
-                            <Maximize2 size={20} className={`hover:${NEON_GREEN}`} />
-                        </div>
                     </div>
-                </div>
 
-                {/* Channel Info (Sharp, Dark) */}
-                <div className="bg-black/70 border-2 border-[#00FF41]/50 rounded-lg p-6 flex justify-between items-center shadow-lg shadow-black/50">
-                    <div>
-                        <h2 className={`text-2xl font-black text-white uppercase tracking-tighter ${NEON_GREEN}`}>ESPORTRESTREAM CHANNEL</h2>
-                        <div className="flex items-center gap-3 text-sm text-white/50 mt-1 font-mono">
-                            <Gamepad2 size={14} className={NEON_PINK} /> League of Legends // 128K Subscribers
-                        </div>
+                    {/* YouTube Iframe (တကယ့် Video လာပေါ်မည့်နေရာ) */}
+                    <div className="absolute inset-0 z-10">
+                        {/* jfKfPfyJRdk နေရာတွင် မိမိပြချင်သော Video ID ထည့်ပါ */}
+                        <iframe 
+                            className="w-full h-full pointer-events-auto"
+                            src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1" 
+                            title="Live Stream Video" 
+                            frameBorder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowFullScreen
+                        ></iframe>
                     </div>
-                    {!subscribed ? (
+
+                    {/* Bottom Chat Toggle Button (Video အပေါ်တွင် ပေါ်နေစေရန်) */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 z-20 bg-linear-to-t from-black/90 to-transparent flex items-end justify-end pointer-events-none">
                         <button
-                            onClick={() => setSubscribed(true)}
-                            className="px-6 py-3 rounded-lg bg-[#FF00A6] text-white font-bold uppercase tracking-widest hover:bg-[#FF00A6]/80 transition shadow-lg shadow-[#FF00A6]/30"
+                            onClick={() => setChatVisible(!chatVisible)}
+                            className={`pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-xs font-bold transition backdrop-blur-md shadow-lg
+                            ${chatVisible
+                                    ? 'bg-[#FF00A6]/80 border-[#FF00A6] text-white shadow-[0_0_15px_rgba(255,0,166,0.6)]'
+                                    : 'bg-black/80 border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
+                                }
+                            `}
                         >
-                            SUBSCRIBE
+                            {chatVisible ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
+                            {chatVisible ? 'HIDE CHAT' : 'SHOW CHAT'}
                         </button>
-                    ) : (
-                        <span className={`flex items-center gap-2 ${NEON_GREEN} font-bold uppercase`}>
-                            <CheckCircle size={18} /> ACCESS GRANTED
-                        </span>
-                    )}
+                    </div>
                 </div>
-            </div>
 
             {/* --- Chat (Redesigned) --- */}
             <div className={`w-96 bg-black/80 border-4 border-[#FF00A6]/70 rounded-lg flex flex-col shadow-2xl ${NEON_SHADOW_PINK} overflow-hidden`}>
@@ -946,110 +913,188 @@ const RestreamPage = () => {
 // 5. MAIN APP COMPONENT
 // ------------------------------------
 
+const StreamerDashboard = () => (
+    <div className="p-8 h-full overflow-y-auto">
+        <h2 className="text-3xl font-black text-white uppercase mb-8 flex items-center gap-3">
+            <Video className="text-[#00FF41]" /> CREATOR STUDIO (STREAMER ONLY)
+        </h2>
+        <div className="bg-black/60 border-2 border-[#00FF41]/50 p-6 rounded-lg">
+            <p className="text-white font-mono mb-4">Welcome to your dashboard. Here you can generate Stream Keys, update your tournament schedule, and interact with your subscribers.</p>
+            <button className="px-6 py-3 bg-[#00FF41] text-black font-black uppercase rounded hover:bg-[#00FF41]/80 transition">Generate Stream Key</button>
+        </div>
+    </div>
+);
+
+const AdminPanel = () => (
+    <div className="p-8 h-full overflow-y-auto">
+        <h2 className="text-3xl font-black text-white uppercase mb-8 flex items-center gap-3">
+            <Shield className="text-red-500" /> SYSTEM ADMIN PANEL
+        </h2>
+        <div className="bg-black/60 border-2 border-red-500/50 p-6 rounded-lg">
+            <p className="text-white font-mono mb-4">Super Secret Area. Manage user roles, moderate chats, and handle platform settings.</p>
+            <button className="px-6 py-3 bg-red-600 text-white font-black uppercase rounded hover:bg-red-500 transition">View Ban List</button>
+        </div>
+    </div>
+);
+
+
+// ------------------------------------
+// MAIN APP COMPONENT (With Unified Auth & Role System)
+// ------------------------------------
+
 export default function App() {
     const [activeTab, setActiveTab] = useState('home');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    
+    // Auth States
+    const [user, setUser] = useState(null);
+    const [userRole, setUserRole] = useState('audience'); // Default Role
 
-    const navItems = [
+    // 1. Firebase မှ User Role ကို စစ်ဆေးခြင်း
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                // Database ထဲမှာ ဒီ User ရှိမရှိ စစ်ဆေးမယ်
+                const userRef = ref(db, `users/${currentUser.uid}`);
+                const snapshot = await get(userRef);
+                
+                if (snapshot.exists()) {
+                    // အရင်က ဝင်ဖူးရင် သူ့ရဲ့ Role ကို ယူမယ်
+                    setUserRole(snapshot.val().role);
+                } else {
+                    // ပထမဆုံးအကြိမ် Login ဝင်တာဖြစ်ရင် Audience အနေနဲ့ Database မှာ မှတ်မယ်
+                    await set(userRef, {
+                        name: currentUser.displayName,
+                        email: currentUser.email,
+                        role: 'audience' // မူလအဆင့် (Audience)
+                    });
+                    setUserRole('audience');
+                }
+            } else {
+                setUserRole('audience'); // Logout လုပ်သွားရင် Role ကို Reset ချမယ်
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handleLogin = async () => {
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Login Error:", error);
+        }
+    };
+
+    const handleLogout = () => {
+        signOut(auth);
+        setActiveTab('home');
+    };
+
+    // 2. Role ပေါ်မူတည်ပြီး ပေါ်မည့် Navigation Tab များ
+    let navItems = [
         { id: 'home', label: 'HOME', icon: Home },
         { id: 'live', label: 'LIVE VIEW', icon: PlayCircle },
         { id: 'schedule', label: 'SCHEDULE', icon: CalendarDays },
         { id: 'caster', label: 'CASTER HUB', icon: Mic2 },
         { id: 'restreamer', label: 'VOD / RESTREAMS', icon: Repeat },
-        { id: 'profile', label: 'PROFILE', icon: User },
     ];
+
+    // Login ဝင်ထားမှ Profile ပြမယ်
+    if (user) {
+        navItems.push({ id: 'profile', label: 'MY PROFILE', icon: User });
+    }
+
+    // Streamer ဒါမှမဟုတ် Admin ဆိုရင် Streamer Dashboard ပြမယ်
+    if (userRole === 'streamer' || userRole === 'admin') {
+        navItems.push({ id: 'streamer_dash', label: 'CREATOR STUDIO', icon: Video });
+    }
+
+    // Admin ဆိုရင် Admin Panel သီးသန့်ပြမယ်
+    if (userRole === 'admin') {
+        navItems.push({ id: 'admin_panel', label: 'ADMIN PANEL', icon: Shield });
+    }
 
     return (
         <div className="h-dvh w-screen overflow-hidden font-sans text-slate-200 bg-black flex flex-col">
             
-            {/* --- 1. PERSISTENT TOP HEADER --- */}
+            {/* --- TOP HEADER --- */}
             <header className="h-16 flex items-center justify-between px-4 bg-[#111111] border-b-2 border-[#00FF41]/50 shadow-md shadow-black/50 z-50 shrink-0">
                 <div className="flex items-center gap-4">
-                    {/* Hamburger Menu */}
-                    <button 
-                        onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-                        className="p-2 text-white/70 hover:text-[#00FF41] transition bg-white/5 rounded-md"
-                    >
+                    <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-white/70 hover:text-[#00FF41] transition bg-white/5 rounded-md">
                         <Menu size={24} />
                     </button>
-                    
-                    {/* Logo (Smaller for Header) */}
                     <div className="text-xl font-black uppercase tracking-tighter text-[#00FF41] flex items-center gap-2 hidden md:flex">
-    <img 
-        src="src/assets/logo14.png" 
-        alt="EsportRestream Logo" 
-        className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]" 
-    />
-    ESPORTSRESTREAM
-</div>
+                        <img src="src/assets/logo14.png" alt="Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,0,166,0.5)]" onError={(e)=>{e.target.style.display='none'}}/>
+                        ESPORTSRESTREAM
+                    </div>
                 </div>
 
-                {/* Persistent Search Bar */}
                 <div className="flex-1 max-w-xl px-4">
                     <div className="relative group">
-                        <input 
-                            type="text" 
-                            placeholder="SEARCH STREAMS, TOURNAMENTS, CASTERS..." 
-                            className="w-full bg-[#222222] border border-white/20 rounded-full py-2 pl-12 pr-4 text-white placeholder-white/50 focus:outline-none focus:border-[#00FF41] focus:ring-1 focus:ring-[#00FF41] transition text-sm font-mono"
-                        />
+                        <input type="text" placeholder="SEARCH STREAMS, TOURNAMENTS, CASTERS..." className="w-full bg-[#222222] border border-white/20 rounded-full py-2 pl-12 pr-4 text-white placeholder-white/50 focus:outline-none focus:border-[#00FF41] focus:ring-1 focus:ring-[#00FF41] transition text-sm font-mono"/>
                         <Search size={18} className="absolute left-4 top-2.5 text-white/50 group-focus-within:text-[#00FF41] transition" />
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <button className="p-2 text-white/70 hover:text-[#FF00A6] transition"><Bell size={20} /></button>
-                    <div onClick={() => setActiveTab('profile')} className="w-8 h-8 rounded-full bg-white/20 border border-[#00FF41] flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
-                        <User size={16} className="text-[#00FF41]" />
-                    </div>
+                    {user ? (
+                        <div onClick={() => setActiveTab('profile')} className="w-8 h-8 rounded-full bg-[#00FF41]/20 border border-[#00FF41] flex items-center justify-center cursor-pointer hover:bg-[#00FF41]/40 transition text-xs font-bold text-[#00FF41]">
+                            {user.displayName.charAt(0).toUpperCase()}
+                        </div>
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-white/10 border border-white/30 flex items-center justify-center text-white/50">
+                            <User size={16} />
+                        </div>
+                    )}
                 </div>
             </header>
 
-            {/* --- 2. MAIN LAYOUT (Sidebar + Content) --- */}
+            {/* --- MAIN LAYOUT --- */}
             <div className="flex-1 flex overflow-hidden relative z-10">
-                
-                {/* Sidebar */}
-                <aside className={`
-                    bg-[#111111] border-r border-white/10 transition-all duration-300 ease-in-out flex flex-col shrink-0
-                    ${isSidebarOpen ? 'w-64' : 'w-16'}
-                `}>
-                    <div className="flex-1 py-4 flex flex-col gap-2 px-2">
+                <aside className={`bg-[#111111] border-r border-white/10 transition-all duration-300 ease-in-out flex flex-col shrink-0 ${isSidebarOpen ? 'w-64' : 'w-16'}`}>
+                    <div className="flex-1 py-4 flex flex-col gap-2 px-2 overflow-y-auto custom-scrollbar">
                         {navItems.map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => setActiveTab(item.id)}
-                                className={`
-                                    flex items-center gap-4 px-3 py-3 rounded-lg font-bold transition whitespace-nowrap overflow-hidden
+                                className={`flex items-center gap-4 px-3 py-3 rounded-lg font-bold transition whitespace-nowrap overflow-hidden
                                     ${activeTab === item.id 
                                         ? 'bg-[#FF00A6]/20 text-[#FF00A6] border border-[#FF00A6]/50' 
                                         : 'text-white/60 hover:bg-white/5 hover:text-white'
-                                    }
-                                `}
+                                    }`}
                                 title={!isSidebarOpen ? item.label : ""}
                             >
-                                <item.icon size={20} className="shrink-0" />
+                                <item.icon size={20} className={`shrink-0 ${item.id === 'admin_panel' ? 'text-red-500' : ''} ${item.id === 'streamer_dash' ? 'text-[#00FF41]' : ''}`} />
                                 <span className={`text-sm uppercase tracking-wider transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
                                     {item.label}
                                 </span>
                             </button>
                         ))}
                     </div>
-                    {/* Bottom Logout Button */}
+
+                    {/* Unified Login / Logout Button */}
                     <div className="p-2 border-t border-white/10">
-                        <button className="w-full flex items-center gap-4 px-3 py-3 rounded-lg text-white/50 hover:text-red-500 hover:bg-red-500/10 transition overflow-hidden">
-                            <LogOut size={20} className="shrink-0" />
-                            <span className={`text-sm font-bold uppercase transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>LOGOUT</span>
-                        </button>
+                        {user ? (
+                            <button onClick={handleLogout} className="w-full flex items-center gap-4 px-3 py-3 rounded-lg text-white/50 hover:text-red-500 hover:bg-red-500/10 transition overflow-hidden">
+                                <LogOut size={20} className="shrink-0" />
+                                <span className={`text-sm font-bold uppercase transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>LOGOUT</span>
+                            </button>
+                        ) : (
+                            <button onClick={handleLogin} className="w-full flex items-center gap-4 px-3 py-3 rounded-lg text-black bg-[#00FF41] hover:bg-[#00FF41]/80 transition overflow-hidden shadow-[0_0_10px_rgba(0,255,65,0.4)]">
+                                <LogIn size={20} className="shrink-0" />
+                                <span className={`text-sm font-black uppercase transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>LOGIN</span>
+                            </button>
+                        )}
                     </div>
                 </aside>
 
-                {/* Main Content Area */}
                 <main className="flex-1 h-full overflow-hidden relative">
-                    {/* Background Effects */}
                     <div className="absolute inset-0 pointer-events-none z-0">
                         <div className="absolute inset-0 bg-repeat bg-size-[20px_20px] opacity-10" style={{ backgroundImage: 'linear-gradient(to right, #00FF4120 1px, transparent 1px), linear-gradient(to bottom, #00FF4120 1px, transparent 1px)' }}></div>
                     </div>
                     
-                    {/* Render Active Page */}
                     <div className="relative z-10 h-full w-full">
                         {activeTab === 'home' && <HomePage />}
                         {activeTab === 'live' && <LiveStreamingPage />}
@@ -1057,9 +1102,10 @@ export default function App() {
                         {activeTab === 'caster' && <CasterPage />}
                         {activeTab === 'restreamer' && <RestreamPage />}
                         {activeTab === 'profile' && <UserProfilePage />}
+                        {activeTab === 'streamer_dash' && <StreamerDashboard />}
+                        {activeTab === 'admin_panel' && <AdminPanel />}
                     </div>
                 </main>
-
             </div>
         </div>
     );
