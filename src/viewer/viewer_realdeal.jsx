@@ -50,8 +50,13 @@ const LiveStreamingPage = ({ selectedLive, setSelectedLive, user }) => {
 
     const handleSubscribe = () => {
         if (!user) return alert("Please login to subscribe!");
-        if (isSubscribed) remove(ref(db, `subscriptions/${user.uid}/${currentStreamerId}`));
-        else set(ref(db, `subscriptions/${user.uid}/${currentStreamerId}`), { streamerName: currentStreamerName, timestamp: serverTimestamp() });
+        if (isSubscribed) {
+            remove(ref(db, `subscriptions/${user.uid}/${currentStreamerId}`));
+            push(ref(db, `notifications/${user.uid}`), { text: `Unsubscribed from ${currentStreamerName}.`, time: serverTimestamp(), read: false });
+        } else {
+            set(ref(db, `subscriptions/${user.uid}/${currentStreamerId}`), { streamerName: currentStreamerName, timestamp: serverTimestamp() });
+            push(ref(db, `notifications/${user.uid}`), { text: `Successfully subscribed to ${currentStreamerName}!`, time: serverTimestamp(), read: false });
+        }
     };
 
     const handleDonate = () => {
@@ -61,9 +66,11 @@ const LiveStreamingPage = ({ selectedLive, setSelectedLive, user }) => {
             const earningsRef = ref(db, `earnings/${currentStreamerId}/donations`);
             get(earningsRef).then((snapshot) => {
                 const currentTotal = snapshot.val() || 0;
-                set(earningsRef, currentTotal + amount);
-                alert(`Successfully donated $${amount} to ${currentStreamerName}!`);
-                setDonationAmount('');
+                set(earningsRef, currentTotal + amount).then(() => {
+                    alert(`Successfully donated $${amount} to ${currentStreamerName}!`);
+                    push(ref(db, `notifications/${user.uid}`), { text: `You donated $${amount} to ${currentStreamerName}! Thank you for your support.`, time: serverTimestamp(), read: false });
+                    setDonationAmount('');
+                });
             });
         }
     };
@@ -291,7 +298,10 @@ const StreamerDashboard = ({ user }) => {
             };
             set(ref(db, `activeStreams/${user.uid}`), streamData);
             push(ref(db, 'streams'), streamData).then(() => {
-                setStatusMsg('SUCCESS: STREAM IS NOW LIVE!'); setStreamLink(''); setTimeout(() => setStatusMsg(''), 5000);
+                setStatusMsg('SUCCESS: STREAM IS NOW LIVE!'); 
+                setStreamLink(''); 
+                push(ref(db, `notifications/${user.uid}`), { text: `Your stream is now LIVE on the platform!`, time: serverTimestamp(), read: false });
+                setTimeout(() => setStatusMsg(''), 5000);
             });
         } else setStatusMsg('ERROR: INVALID YOUTUBE LINK.');
     };
@@ -372,7 +382,12 @@ const UserProfilePage = ({ user, userProfileData }) => {
     };
 
     const handleUpgrade = () => {
-        if(user) update(ref(db, `users/${user.uid}`), { subscriptionPlan: 'premium' }).then(()=>alert("Upgraded to Premium successfully!"));
+        if(user) {
+            update(ref(db, `users/${user.uid}`), { subscriptionPlan: 'premium' }).then(()=>{
+                alert("Upgraded to Premium successfully!");
+                push(ref(db, `notifications/${user.uid}`), { text: `Upgraded to PREMIUM PLAN! Enjoy your ad-free experience.`, time: serverTimestamp(), read: false });
+            });
+        }
     };
 
     const handleFeedback = () => {
@@ -668,8 +683,13 @@ const ChannelPage = ({ channelId, channelName, goBack, user }) => {
 
     const handleChannelSubscribe = () => {
         if (!user) return alert("Please login to subscribe!");
-        if (isSubscribed) remove(ref(db, `subscriptions/${user.uid}/${channelId}`));
-        else set(ref(db, `subscriptions/${user.uid}/${channelId}`), { streamerName: channelName, timestamp: serverTimestamp() });
+        if (isSubscribed) {
+            remove(ref(db, `subscriptions/${user.uid}/${channelId}`));
+            push(ref(db, `notifications/${user.uid}`), { text: `Unsubscribed from ${channelName}.`, time: serverTimestamp(), read: false });
+        } else {
+            set(ref(db, `subscriptions/${user.uid}/${channelId}`), { streamerName: channelName, timestamp: serverTimestamp() });
+            push(ref(db, `notifications/${user.uid}`), { text: `Successfully subscribed to ${channelName}!`, time: serverTimestamp(), read: false });
+        }
     };
 
     if (playingVodId) {
@@ -845,7 +865,7 @@ const AdminPanel = () => (
 );
 
 // ==========================================
-// 10. MAIN APP COMPONENT
+// 10. MAIN APP COMPONENT (With Alarm/Notification System)
 // ==========================================
 export default function App() {
     const [activeTab, setActiveTab] = useState('home');
@@ -855,6 +875,10 @@ export default function App() {
     const [selectedLive, setSelectedLive] = useState(null);
     const [selectedChannelId, setSelectedChannelId] = useState(null);
     const [selectedChannelName, setSelectedChannelName] = useState('');
+    
+    // Notifications State
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState([]);
 
     const goToChannel = (streamerId, streamerName) => {
         setSelectedChannelId(streamerId);
@@ -874,11 +898,38 @@ export default function App() {
                     const newData = { name: currentUser.displayName, email: currentUser.email, role: 'audience', joinedDate: Date.now(), subscriptionPlan: 'free' };
                     await set(userRef, newData);
                     setUserProfileData(newData);
+                    // Welcome Notification Trigger
+                    push(ref(db, `notifications/${currentUser.uid}`), { text: 'Welcome to ESPORTRESTREAM! Start watching your favorite streamers.', time: serverTimestamp(), read: false });
                 }
             } else setUserProfileData(null);
         });
         return () => unsubscribe();
     }, []);
+
+    // Fetch Notifications from Firebase
+    useEffect(() => {
+        if (user) {
+            onValue(ref(db, `notifications/${user.uid}`), (snapshot) => {
+                const data = snapshot.val();
+                if (data) setNotifications(Object.keys(data).map(k => ({ id: k, ...data[k] })).reverse());
+                else setNotifications([]);
+            });
+        } else {
+            setNotifications([]);
+        }
+    }, [user]);
+
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    const markAsRead = (notifId) => {
+        update(ref(db, `notifications/${user.uid}/${notifId}`), { read: true });
+    };
+
+    const markAllAsRead = () => {
+        notifications.forEach(n => {
+            if(!n.read) update(ref(db, `notifications/${user.uid}/${n.id}`), { read: true });
+        });
+    };
 
     const userRole = userProfileData?.role || 'audience';
 
@@ -927,6 +978,38 @@ export default function App() {
                     <div className="text-xl font-black uppercase tracking-tighter text-[#00FF41] flex items-center gap-2">
                         <img src="src/assets/logo14.png" alt="Logo" className="w-10 h-10 object-contain" onError={(e)=>{e.target.style.display='none'}}/>
                         ESPORTSRESTREAM
+                    </div>
+                </div>
+                
+                {/* Alarm / Notification System in Header */}
+                <div className="flex items-center gap-4 relative">
+                    <div className="relative">
+                        <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 text-white/70 hover:text-[#FF00A6] transition relative bg-white/5 rounded-full">
+                            <Bell size={20} />
+                            {unreadCount > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_8px_red]"></span>}
+                        </button>
+                        
+                        {/* Notification Dropdown Panel */}
+                        {showNotifications && (
+                            <div className="absolute right-0 mt-3 w-80 bg-black/95 backdrop-blur-xl border-2 border-[#00FF41]/50 rounded-lg shadow-[0_0_20px_rgba(0,255,65,0.4)] z-50 overflow-hidden flex flex-col animate-fade-in">
+                                <div className="p-4 border-b border-[#00FF41]/30 flex justify-between items-center bg-black">
+                                    <h3 className="text-[#00FF41] font-black uppercase tracking-widest text-sm flex items-center gap-2"><Bell size={16}/> ALARMS</h3>
+                                    {unreadCount > 0 && <button onClick={markAllAsRead} className="text-[10px] text-white/50 hover:text-[#FF00A6] transition uppercase font-bold bg-white/5 px-2 py-1 rounded">Mark all read</button>}
+                                </div>
+                                <div className="max-h-80 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                                    {notifications.length === 0 ? (
+                                        <p className="text-center text-white/40 text-xs py-6 font-mono">No new alarms.</p>
+                                    ) : (
+                                        notifications.map(n => (
+                                            <div key={n.id} onClick={() => markAsRead(n.id)} className={`p-3 rounded-md cursor-pointer border-l-2 transition ${n.read ? 'bg-white/5 border-transparent opacity-60' : 'bg-[#00FF41]/10 border-[#00FF41] hover:bg-[#00FF41]/20 shadow-[0_0_10px_rgba(0,255,65,0.1)]'}`}>
+                                                <p className={`text-sm ${n.read ? 'text-white/70' : 'text-white font-bold'}`}>{n.text}</p>
+                                                <p className="text-white/40 text-[10px] font-mono mt-2">{n.time ? new Date(n.time).toLocaleString() : 'Just now'}</p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>
