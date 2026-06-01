@@ -13,7 +13,7 @@ const NEON_PINK = 'text-[#FF00A6]';
 // ==========================================
 // 7. CHANNEL PAGE (Part 3: Dynamic VODs Integration)
 // ==========================================
-const ChannelPage = ({ channelId, channelName, goBack }) => {
+const ChannelPage = ({ channelId, channelName, goBack, user }) => {
     const [activeChannelTab, setActiveChannelTab] = useState('vods');
     const [channelVods, setChannelVods] = useState([]); // Streamer ၏ VOD များကို သိမ်းရန်
     const [playingVodId, setPlayingVodId] = useState(null); // Video ဖွင့်ကြည့်ရန် State
