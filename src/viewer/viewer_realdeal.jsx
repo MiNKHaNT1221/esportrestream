@@ -9,173 +9,216 @@ import {
 const NEON_GREEN = 'text-[#00FF41]';
 const NEON_PINK = 'text-[#FF00A6]';
 
+
 // ==========================================
-// 1. NOW STREAMING PAGE (Formerly Live View)
+// 7. CHANNEL PAGE (Part 3: Dynamic VODs Integration)
 // ==========================================
-const LiveStreamingPage = ({ selectedLive, setSelectedLive, user }) => {
-    const [chatVisible, setChatVisible] = useState(true);
-    const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
+const ChannelPage = ({ channelId, channelName, goBack }) => {
+    const [activeChannelTab, setActiveChannelTab] = useState('vods');
+    const [channelVods, setChannelVods] = useState([]); // Streamer ၏ VOD များကို သိမ်းရန်
+    const [playingVodId, setPlayingVodId] = useState(null); // Video ဖွင့်ကြည့်ရန် State
+    const [channelPosts, setChannelPosts] = useState([]); // Streamer ၏ ပို့စ်များကို သိမ်းရန်
     const [isSubscribed, setIsSubscribed] = useState(false);
-    const [donationAmount, setDonationAmount] = useState('');
 
-    const currentVideoId = selectedLive?.videoId;
-    const currentStreamerId = selectedLive?.streamerId;
-    const currentStreamerName = selectedLive?.streamerName;
-
-    // Fetch Chat dynamically based on current selected video
+    // လက်ရှိ User က ဒီ Channel ကို Subscribe လုပ်ထားခြင်း ရှိ/မရှိ စစ်ဆေးခြင်း
     useEffect(() => {
-        if(!currentVideoId) return;
-        const chatRef = ref(db, `liveChats/${currentVideoId}`);
-        onValue(chatRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) setMessages(Object.keys(data).map(key => ({ id: key, ...data[key] })));
-            else setMessages([]);
-        });
-    }, [currentVideoId]);
-
-    // Check if user is subscribed to this streamer
-    useEffect(() => {
-        if (user && currentStreamerId) {
-            const subRef = ref(db, `subscriptions/${user.uid}/${currentStreamerId}`);
+        if (user && channelId) {
+            const subRef = ref(db, `subscriptions/${user.uid}/${channelId}`);
             onValue(subRef, (snapshot) => {
                 setIsSubscribed(snapshot.exists());
             });
         }
-    }, [user, currentStreamerId]);
+    }, [user, channelId]);
 
-    const handleSendMessage = () => {
-        if (newMessage.trim() === '' || !user || !currentVideoId) return;
-        push(ref(db, `liveChats/${currentVideoId}`), {
-            text: newMessage,
-            userId: user.uid,
-            userName: user.displayName || 'Anonymous',
-            timestamp: serverTimestamp()
-        });
-        setNewMessage('');
-    };
-
-    const handleSubscribe = () => {
+    // Subscribe / Unsubscribe လုပ်မည့် Function
+    const handleChannelSubscribe = () => {
         if (!user) return alert("Please login to subscribe!");
         if (isSubscribed) {
-            remove(ref(db, `subscriptions/${user.uid}/${currentStreamerId}`));
+            // Unsubscribe လုပ်ခြင်း
+            remove(ref(db, `subscriptions/${user.uid}/${channelId}`));
         } else {
-            set(ref(db, `subscriptions/${user.uid}/${currentStreamerId}`), {
-                streamerName: currentStreamerName,
+            // Subscribe လုပ်ခြင်း
+            set(ref(db, `subscriptions/${user.uid}/${channelId}`), {
+                streamerName: channelName,
                 timestamp: serverTimestamp()
             });
         }
     };
 
-    const handleDonate = () => {
-        if (!user) return alert("Please login to donate!");
-        const amount = parseFloat(donationAmount);
-        if (amount > 0 && currentStreamerId) {
-            const earningsRef = ref(db, `earnings/${currentStreamerId}/donations`);
-            get(earningsRef).then((snapshot) => {
-                const currentTotal = snapshot.val() || 0;
-                set(earningsRef, currentTotal + amount);
-                alert(`Successfully donated $${amount} to ${currentStreamerName}!`);
-                setDonationAmount('');
-            });
-        }
-    };
+    // Firebase မှ ဒီ Streamer တင်ထားသော ပို့စ်များကိုသာ Filter စစ်ပြီး ဆွဲထုတ်ခြင်း
+    useEffect(() => {
+        if (!channelId) return;
+        const postsRef = ref(db, 'posts');
+        onValue(postsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const allPosts = Object.keys(data).map(key => ({ id: key, ...data[key] })).reverse();
+                // ဒီ Streamer ရဲ့ ID နဲ့ တူတဲ့ ပို့စ်တွေကိုပဲ ရွေးထုတ်မယ်
+                const filteredPosts = allPosts.filter(post => post.userId === channelId);
+                setChannelPosts(filteredPosts);
+            } else {
+                setChannelPosts([]);
+            }
+        });
+    }, [channelId]);
 
-    const handleEndLive = () => {
-        if (window.confirm("Are you sure you want to end your live stream?")) {
-            remove(ref(db, `activeStreams/${user.uid}`));
-            setSelectedLive(null);
-        }
-    };
+    // Firebase မှ ဒီ Channel (Streamer) ရဲ့ VOD များကိုသာ Filter စစ်ပြီး ဆွဲထုတ်ခြင်း
+    useEffect(() => {
+        if (!channelId) return;
+        const streamsRef = ref(db, 'streams');
+        onValue(streamsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const allStreams = Object.keys(data).map(key => ({ id: key, ...data[key] })).reverse();
+                // ဒီ Streamer ရဲ့ ID နဲ့ တူတဲ့ Video တွေကိုပဲ ရွေးထုတ်မယ်
+                const filteredVods = allStreams.filter(stream => stream.streamerId === channelId);
+                setChannelVods(filteredVods);
+            } else {
+                setChannelVods([]);
+            }
+        });
+    }, [channelId]);
 
-    if(!currentVideoId) {
+    // Video ကို နှိပ်လိုက်လျှင် ပေါ်လာမည့် Full Screen VOD Player
+    if (playingVodId) {
         return (
-            <div className="flex items-center justify-center h-full p-8 text-center flex-col gap-4">
-                <MonitorPlay size={64} className="text-[#FF00A6] opacity-50" />
-                <h2 className="text-2xl font-black text-white uppercase tracking-widest">No Stream Selected</h2>
-                <p className="text-white/50 font-mono">Please go to the "LIVES" page and select an active broadcast to watch.</p>
+            <div className="p-8 h-full flex flex-col bg-black">
+                <button onClick={() => setPlayingVodId(null)} className="mb-4 text-[#FF00A6] font-bold uppercase flex items-center gap-2 hover:text-white transition w-fit">
+                    <ArrowLeft size={18}/> BACK TO CHANNEL
+                </button>
+                <div className="flex-1 bg-black border-4 border-[#FF00A6]/70 rounded-lg overflow-hidden relative shadow-[0_0_20px_rgba(255,0,166,0.6)]">
+                    <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${playingVodId}?autoplay=1&mute=0`} allowFullScreen frameBorder="0"></iframe>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="flex h-full p-6 gap-6 relative z-10 overflow-hidden">
-            <div className={`flex-1 flex flex-col gap-6 transition-all duration-500 relative`}>
-                <div className={`flex-1 bg-black border-4 border-[#00FF41]/70 rounded-lg overflow-hidden relative shadow-[0_0_15px_rgba(0,255,65,0.6)] group`}>
-                    
-                    <div className="absolute top-0 left-0 right-0 p-6 z-20 bg-linear-to-b from-black/90 via-black/60 to-transparent pointer-events-none">
-                        <div className="flex items-start justify-between">
-                            <div className="pointer-events-auto">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <span className="bg-red-700 shadow-[0_0_15px_rgba(0,255,65,0.6)] text-[#00FF41] text-[12px] font-extrabold px-3 py-1 rounded-sm uppercase tracking-widest animate-pulse border border-[#00FF41]">LIVE FEED</span>
-                                </div>
-                                <h1 className="text-4xl font-black text-white tracking-tighter drop-shadow-xl uppercase">{currentStreamerName}'S BROADCAST</h1>
-                            </div>
-                            {user?.uid === currentStreamerId && (
-                                <button onClick={handleEndLive} className="pointer-events-auto px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold uppercase rounded-lg shadow-[0_0_15px_rgba(255,0,0,0.6)] flex items-center gap-2 transition">
-                                    <StopCircle size={18} /> END LIVE
-                                </button>
-                            )}
-                        </div>
-                    </div>
+        <div className="p-8 h-full overflow-y-auto bg-black custom-scrollbar">
+            {/* Back Button */}
+            <button onClick={goBack} className="mb-6 text-[#FF00A6] font-bold uppercase flex items-center gap-2 hover:text-white transition w-fit">
+                <ArrowLeft size={18}/> BACK TO PREVIOUS
+            </button>
 
-                    <div className="absolute inset-0 z-10">
-                        <iframe className="w-full h-full pointer-events-auto" src={`https://www.youtube.com/embed/${currentVideoId}?autoplay=1&mute=0`} title="Live Stream" frameBorder="0" allowFullScreen></iframe>
+           {/* Channel Header (Updated for Part 5) */}
+            <div className="bg-black/60 border-2 border-[#00FF41]/50 rounded-xl p-8 mb-8 flex justify-between items-center shadow-[0_0_20px_rgba(0,255,65,0.2)]">
+                <div className="flex items-center gap-6">
+                    <div className="w-24 h-24 rounded-full bg-[#00FF41]/20 border-4 border-[#00FF41] flex items-center justify-center shadow-lg">
+                        <User size={48} className="text-[#00FF41]" />
                     </div>
-
-                    <div className="absolute bottom-0 left-0 right-0 p-4 z-20 bg-linear-to-t from-black/90 to-transparent flex items-end justify-end pointer-events-none opacity-0 group-hover:opacity-100 transition duration-300">
-                        <button onClick={() => setChatVisible(!chatVisible)} className={`pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-xs font-bold transition backdrop-blur-md shadow-lg ${chatVisible ? 'bg-[#FF00A6]/80 border-[#FF00A6] text-white shadow-[0_0_15px_rgba(255,0,166,0.6)]' : 'bg-black/80 border-white/20 text-white/70 hover:bg-white/10'}`}>
-                            {chatVisible ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />} {chatVisible ? 'HIDE CHAT' : 'SHOW CHAT'}
-                        </button>
+                    <div>
+                        <h1 className="text-4xl font-black text-white uppercase tracking-tighter drop-shadow-md">
+                            {channelName || 'STREAMER CHANNEL'}
+                        </h1>
+                        <p className="text-[#00FF41] font-mono mt-2 font-bold">{channelVods.length} Uploaded Videos</p>
                     </div>
                 </div>
+                
+                {/* Dynamic Subscribe Button */}
+                {user?.uid !== channelId && (
+                    <button 
+                        onClick={handleChannelSubscribe} 
+                        className={`px-8 py-3 font-black uppercase tracking-widest rounded-lg transition shadow-lg ${isSubscribed ? 'bg-white/10 border border-white/30 text-white hover:bg-white/20' : 'bg-[#FF00A6] text-white hover:bg-[#FF00A6]/80 shadow-[0_0_15px_rgba(255,0,166,0.4)]'}`}
+                    >
+                        {isSubscribed ? 'SUBSCRIBED' : 'SUBSCRIBE'}
+                    </button>
+                )}
+            </div>
 
-                <div className="bg-black/70 border-2 border-[#00FF41]/50 rounded-lg p-6 flex justify-between items-center shadow-lg shadow-black/50 shrink-0">
-                    <div>
-                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter text-[#00FF41]">{currentStreamerName || 'ESPORTRESTREAM NETWORK'}</h2>
-                        <div className="flex items-center gap-3 text-sm text-white/50 mt-1 font-mono"><MonitorPlay size={14} className="text-[#FF00A6]" /> Live Match Broadcasting</div>
-                    </div>
-                    {user?.uid !== currentStreamerId && (
-                        <button onClick={handleSubscribe} className={`px-6 py-3 rounded-lg font-bold uppercase tracking-widest transition ${isSubscribed ? 'bg-white/10 text-white border border-white/30' : 'bg-[#FF00A6] text-white hover:bg-[#FF00A6]/80 shadow-[0_0_10px_rgba(255,0,166,0.5)]'}`}>
-                            {isSubscribed ? 'UNSUBSCRIBE' : 'SUBSCRIBE'}
-                        </button>
+            {/* Channel Content Tabs */}
+            <div className="flex gap-8 border-b border-white/20 pb-4 mb-6">
+                <button onClick={() => setActiveChannelTab('vods')} className={`text-xl font-black uppercase transition ${activeChannelTab === 'vods' ? 'text-[#00FF41]' : 'text-white/50 hover:text-white'}`}>
+                    VIDEOS (VODS)
+                </button>
+                <button onClick={() => setActiveChannelTab('highlights')} className={`text-xl font-black uppercase transition ${activeChannelTab === 'highlights' ? 'text-[#FF00A6]' : 'text-white/50 hover:text-white'}`}>
+                    COMMUNITY HIGHLIGHTS
+                </button>
+            </div>
+
+            {/* =======================
+                VIDEOS (VODS) TAB
+            ======================= */}
+            {activeChannelTab === 'vods' && (
+                <div className="animate-fade-in">
+                    {channelVods.length === 0 ? (
+                        <div className="text-white/50 font-mono text-center p-10 bg-white/5 rounded-lg border border-white/10">
+                            This channel hasn't uploaded any VODs yet.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {channelVods.map(vod => (
+                                <div key={vod.id} className="bg-black border-2 border-white/10 rounded-lg overflow-hidden hover:border-[#00FF41] transition group shadow-lg">
+                                    <div className="h-40 relative">
+                                        <iframe className="w-full h-full pointer-events-none" src={`https://www.youtube.com/embed/${vod.videoId}?mute=1`} frameBorder="0"></iframe>
+                                        <div className="absolute inset-0 bg-transparent z-10"></div>
+                                    </div>
+                                    <div className="p-4 bg-black/80 flex flex-col">
+                                        <h3 className="text-white font-bold uppercase truncate">{vod.streamerName}'s Broadcast</h3>
+                                        <span className="text-white/40 text-[10px] font-mono mb-3">{new Date(vod.timestamp).toLocaleDateString()}</span>
+                                        <button onClick={() => setPlayingVodId(vod.videoId)} className="px-4 py-2 bg-[#00FF41]/20 text-[#00FF41] text-sm font-bold uppercase tracking-widest rounded border border-[#00FF41]/50 hover:bg-[#00FF41] hover:text-black transition text-center">
+                                            Watch VOD
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
-            </div>
+            )}
 
-            <div className={`transition-all duration-500 ease-in-out overflow-hidden ${chatVisible ? 'w-96 opacity-100 translate-x-0' : 'w-0 opacity-0 translate-x-10 p-0'}`}>
-                <div className="h-full bg-black/80 backdrop-blur-2xl border-4 border-[#FF00A6]/70 rounded-lg flex flex-col shadow-[0_0_15px_rgba(255,0,166,0.4)]">
-                    <div className="flex justify-between items-center p-4 border-b-2 border-[#FF00A6]/50 bg-black/50">
-                        <h2 className="text-lg font-black text-white flex items-center gap-2 text-[#FF00A6]"><MessageSquare size={18} /> LIVE CHAT</h2>
-                        <button onClick={() => setChatVisible(false)} className="text-white/50 hover:text-[#00FF41]"><PanelRightClose size={18} /></button>
-                    </div>
-                    
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar text-xs font-mono">
-                        {messages.length === 0 && <p className="text-[#00FF41]/70 text-center uppercase">No messages yet.</p>}
-                        {messages.map((msg) => (
-                            <div key={msg.id} className="flex gap-3 items-start p-2 rounded-sm hover:bg-white/5 transition">
-                                <span className="font-bold text-[#00FF41] uppercase shrink-0">{msg.userName}:</span>
-                                <p className="text-white text-sm break-words">{msg.text}</p>
-                            </div>
-                        ))}
-                    </div>
+            {/* =======================
+                HIGHLIGHTS TAB
+            ======================= */}
+            {activeChannelTab === 'highlights' && (
+                <div className="animate-fade-in space-y-6 max-w-3xl">
+                    {channelPosts.length === 0 ? (
+                        <div className="text-white/50 font-mono text-center p-10 bg-white/5 rounded-lg border border-white/10">
+                            This channel hasn't posted any highlights yet.
+                        </div>
+                    ) : (
+                        channelPosts.map(post => {
+                            // Like နဲ့ Comment အရေအတွက်ကို တွက်ချက်ခြင်း
+                            const likeCount = post.likes ? Object.keys(post.likes).length - 1 : 0;
+                            const commentCount = post.comments ? Object.keys(post.comments).length : 0;
 
-                    <div className="p-4 border-t-2 border-[#00FF41]/50 bg-black/50 space-y-3">
-                        <div className="flex gap-2">
-                            <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="SEND MESSAGE..." className="flex-1 bg-black/50 border-2 border-[#FF00A6]/50 rounded-lg py-2 px-3 text-white font-mono outline-none focus:border-[#00FF41]"/>
-                            <button onClick={handleSendMessage} className="p-2 bg-[#00FF41] rounded-lg text-black hover:bg-[#FF00A6] hover:text-white transition"><Send size={16} /></button>
-                        </div>
-                        <div className="flex gap-2 pt-2 border-t border-white/10">
-                            <input type="number" value={donationAmount} onChange={(e) => setDonationAmount(e.target.value)} placeholder="$ AMOUNT" className="w-24 bg-black/50 border-2 border-white/20 rounded-lg py-2 px-3 text-white font-mono outline-none focus:border-[#00FF41] text-xs"/>
-                            <button onClick={handleDonate} className="flex-1 bg-[#FF00A6] rounded-lg text-white font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:bg-[#FF00A6]/80"><DollarSign size={14}/> DONATE</button>
-                        </div>
-                    </div>
+                            return (
+                                <div key={post.id} className="bg-black/80 border-2 border-white/10 rounded-lg p-5 shadow-lg hover:border-[#FF00A6]/30 transition">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-full bg-[#00FF41]/20 border border-[#00FF41] flex items-center justify-center font-bold text-[#00FF41]">
+                                            {post.userName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <span className="font-bold text-[#00FF41] uppercase block">{post.userName}</span>
+                                            <span className="text-white/40 text-[10px] font-mono">{new Date(post.timestamp).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {post.content && <p className="text-white/90 mb-4 whitespace-pre-wrap">{post.content}</p>}
+                                    
+                                    {post.fileData && post.fileType === 'image' && (
+                                        <img src={post.fileData} alt="Post Media" className="w-full max-h-96 object-contain bg-black rounded-md mb-4 border border-white/10" />
+                                    )}
+                                    {post.fileData && post.fileType === 'video' && (
+                                        <video src={post.fileData} controls className="w-full max-h-96 rounded-md mb-4 border border-white/10 bg-black" />
+                                    )}
+                                    
+                                    <div className="flex items-center gap-6 pt-4 border-t border-white/10">
+                                        <div className="flex items-center gap-2 font-bold text-white/50">
+                                            <Heart size={18} className="text-[#FF00A6]" /> {likeCount} Likes
+                                        </div>
+                                        <div className="flex items-center gap-2 font-bold text-white/50">
+                                            <MessageSquare size={18} className="text-[#00FF41]" /> {commentCount} Comments
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })
+                    )}
                 </div>
-            </div>
+            )}
         </div>
     );
 };
-
 // ==========================================
 // 2. LIVES PAGE (All Active Streams)
 // ==========================================
@@ -917,7 +960,7 @@ export default function App() {
                         {activeTab === 'streamer_dash' && <StreamerDashboard user={user} />}
                         {activeTab === 'about' && <AboutUsPage />}
                         {activeTab === 'admin_panel' && <AdminPanel />}
-                        {activeTab === 'channel' && <ChannelPage channelId={selectedChannelId} channelName={selectedChannelName} goBack={() => setActiveTab('subs')} />}
+                       {activeTab === 'channel' && <ChannelPage user={user} channelId={selectedChannelId} channelName={selectedChannelName} goBack={() => setActiveTab('subs')} />}
                     </div>
                 </main>
             </div>
