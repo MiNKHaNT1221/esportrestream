@@ -3,7 +3,7 @@ import { db, auth, provider } from '../firebase';
 import { ref, push, onValue, serverTimestamp, get, set, update, remove } from 'firebase/database';
 import { signInWithPopup, onAuthStateChanged, signOut, updateProfile } from 'firebase/auth';
 import {
-    PlayCircle, Mic2, Repeat, Trophy, Settings, Search, MessageSquare, Heart, Send, Gamepad2, Bell, User, PanelRightClose, PanelRightOpen, Maximize2, Volume2, ArrowLeft, ArrowRight, Twitter, Twitch, ArrowRight as ArrowIcon, Calendar, MapPin, Zap, Star, DollarSign, Lock, CheckCircle, Image, Menu, Home, CalendarDays, Hash, LogOut, History, CreditCard, Video, Shield, LogIn, MonitorPlay, Users, Info, Box, TrendingUp, Edit3, Trash2, StopCircle
+    PlayCircle, Mic2, Repeat, Trophy, Settings, Search, MessageSquare, Heart, Send, Gamepad2, Bell, User, PanelRightClose, PanelRightOpen, Maximize2, Volume2, ArrowLeft, ArrowRight, Twitter, Twitch, ArrowRight as ArrowIcon, Calendar, MapPin, Zap, Star, DollarSign, Lock, CheckCircle, Image, Menu, Home, CalendarDays, Hash, LogOut, History, CreditCard, Video, Shield, LogIn, MonitorPlay, Users, Info, Box, TrendingUp, Edit3, Trash2, StopCircle, AlarmClock, PlusCircle
 } from 'lucide-react';
 
 const NEON_GREEN = 'text-[#00FF41]';
@@ -166,7 +166,7 @@ const LiveStreamingPage = ({ selectedLive, setSelectedLive, user }) => {
 };
 
 // ==========================================
-// 2. LIVES PAGE (Active Streams)
+// 2. LIVES PAGE 
 // ==========================================
 const LivesPage = ({ setSelectedLive, setActiveTab }) => {
     const [activeStreams, setActiveStreams] = useState([]);
@@ -271,7 +271,143 @@ const HomePage = () => {
 };
 
 // ==========================================
-// 4. CREATOR STUDIO
+// 4. TOURNAMENTS PAGE (Alarm System)
+// ==========================================
+const TournamentsPage = () => {
+    const [tournaments, setTournaments] = useState([]);
+    const [alarms, setAlarms] = useState({});
+
+    useEffect(() => {
+        onValue(ref(db, 'tournaments'), (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // အချိန်နီးတဲ့ပွဲတွေကို အပေါ်မှာပြရန် Sort လုပ်ခြင်း
+                const sortedData = Object.keys(data).map(key => ({ id: key, ...data[key] })).sort((a, b) => new Date(a.time) - new Date(b.time));
+                setTournaments(sortedData);
+            } else setTournaments([]);
+        });
+    }, []);
+
+    // Browser Notification API
+    const handleSetAlarm = (tournament) => {
+        const targetTime = new Date(tournament.time).getTime();
+        const now = Date.now();
+        const delay = targetTime - now;
+
+        if (delay < 0) {
+            alert("This match has already started or the time has passed!");
+            return;
+        }
+
+        if ("Notification" in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    setAlarms(prev => ({ ...prev, [tournament.id]: true }));
+                    alert(`Alarm set successfully! We will notify you when ${tournament.name} starts.`);
+                    
+                    // JS setTimeout Logic for trigger
+                    setTimeout(() => {
+                        new Notification("EsportRestream: Match Starting Now!", {
+                            body: `${tournament.name} is live! Go check the LIVES page.`,
+                            icon: "https://cdn-icons-png.flaticon.com/512/808/808439.png" // Alarm Icon
+                        });
+                        setAlarms(prev => ({ ...prev, [tournament.id]: false })); 
+                    }, delay);
+                    
+                } else {
+                    alert("Please allow Browser Notifications to set alarms.");
+                }
+            });
+        } else {
+            alert("Your browser does not support notifications.");
+        }
+    };
+
+    return (
+        <div className="p-8 h-full overflow-y-auto max-w-4xl mx-auto">
+            <h2 className="text-3xl font-black text-white uppercase mb-8 flex items-center gap-3"><CalendarDays className="text-[#FF00A6]" /> TOURNAMENT SCHEDULES</h2>
+            
+            {tournaments.length === 0 ? (
+                <div className="bg-black/50 border border-white/20 p-8 rounded-lg text-center">
+                    <p className="text-white/50 font-mono text-lg uppercase tracking-widest">No upcoming tournaments scheduled yet.</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {tournaments.map(t => (
+                        <div key={t.id} className="bg-black/80 border-2 border-white/10 p-6 rounded-lg shadow-lg flex flex-col md:flex-row justify-between items-center gap-4 hover:border-[#FF00A6]/50 transition">
+                            <div className="flex items-center gap-4 text-center md:text-left">
+                                <div className="bg-[#FF00A6]/10 p-3 rounded-full border border-[#FF00A6]/30">
+                                    <Gamepad2 className="text-[#FF00A6]" size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">{t.name}</h3>
+                                    <p className="text-[#00FF41] font-mono mt-1 text-sm font-bold flex items-center gap-2 justify-center md:justify-start">
+                                        <Calendar size={14} /> {new Date(t.time).toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => handleSetAlarm(t)}
+                                disabled={alarms[t.id]}
+                                className={`px-6 py-3 font-bold uppercase tracking-widest rounded-lg transition flex items-center gap-2 shadow-lg ${alarms[t.id] ? 'bg-white/10 text-white/50 cursor-not-allowed border border-white/20' : 'bg-[#00FF41] text-black hover:bg-[#FF00A6] hover:text-white shadow-[#00FF41]/30'}`}
+                            >
+                                <AlarmClock size={18} /> {alarms[t.id] ? 'ALARM SET' : 'SET ALARM'}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ==========================================
+// 5. ADMIN PANEL (For Tournament Management)
+// ==========================================
+const AdminPanel = () => {
+    const [matchName, setMatchName] = useState('');
+    const [matchTime, setMatchTime] = useState('');
+
+    const handleAddTournament = () => {
+        if (!matchName || !matchTime) return alert("Please fill all fields.");
+        push(ref(db, 'tournaments'), {
+            name: matchName,
+            time: matchTime,
+            timestamp: serverTimestamp()
+        }).then(() => {
+            alert('Tournament Schedule Added Successfully!');
+            setMatchName('');
+            setMatchTime('');
+        });
+    };
+
+    return (
+        <div className="p-8 h-full overflow-y-auto max-w-3xl">
+            <h2 className="text-3xl font-black text-white uppercase mb-8 flex items-center gap-3"><Shield className="text-red-500" /> SYSTEM ADMIN PANEL</h2>
+            
+            <div className="bg-black/60 border-2 border-red-500/50 p-8 rounded-lg shadow-[0_0_20px_rgba(255,0,0,0.1)]">
+                <h3 className="text-xl font-bold text-white mb-6 uppercase border-b border-white/10 pb-4">Manage Tournament Schedules</h3>
+                
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-red-400 text-xs font-bold uppercase tracking-widest mb-2 block">Match Name / Title</label>
+                        <input type="text" value={matchName} onChange={e => setMatchName(e.target.value)} placeholder="e.g., Grand Finals PMCL 2026" className="w-full bg-black/50 border border-white/20 rounded p-3 text-white outline-none focus:border-red-500 transition"/>
+                    </div>
+                    <div>
+                        <label className="text-red-400 text-xs font-bold uppercase tracking-widest mb-2 block">Start Date & Time</label>
+                        <input type="datetime-local" value={matchTime} onChange={e => setMatchTime(e.target.value)}style={{ colorScheme: 'dark' }} className="w-full bg-black/50 border border-white/20 rounded p-3 text-white outline-none focus:border-red-500 transition font-mono"/>
+                    </div>
+                    <button onClick={handleAddTournament} className="w-full mt-4 bg-red-600 text-white font-black uppercase tracking-widest py-3 rounded hover:bg-red-500 transition flex justify-center items-center gap-2">
+                        <PlusCircle size={20} /> PUBLISH SCHEDULE
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ==========================================
+// 6. CREATOR STUDIO
 // ==========================================
 const StreamerDashboard = ({ user }) => {
     const [streamLink, setStreamLink] = useState('');
@@ -357,7 +493,7 @@ const StreamerDashboard = ({ user }) => {
 };
 
 // ==========================================
-// 5. PROFILE SETTINGS & CLIPS
+// 7. PROFILE SETTINGS & CLIPS
 // ==========================================
 const UserProfilePage = ({ user, userProfileData }) => {
     const [activeSubTab, setActiveSubTab] = useState('customize');
@@ -466,7 +602,7 @@ const UserProfilePage = ({ user, userProfileData }) => {
 };
 
 // ==========================================
-// 6. HIGHLIGHTS PAGE
+// 8. HIGHLIGHTS PAGE
 // ==========================================
 const HighlightsPage = ({ user }) => {
     const [posts, setPosts] = useState([]);
@@ -598,7 +734,7 @@ const HighlightsPage = ({ user }) => {
 };
 
 // ==========================================
-// 7. SUBSCRIPTIONS PAGE
+// 9. SUBSCRIPTIONS PAGE
 // ==========================================
 const SubscriptionsPage = ({ user, goToChannel }) => {
     const [subs, setSubs] = useState([]);
@@ -635,7 +771,7 @@ const SubscriptionsPage = ({ user, goToChannel }) => {
 };
 
 // ==========================================
-// 8. CHANNEL PAGE (Full Banner & About)
+// 10. CHANNEL PAGE (Full Banner & About)
 // ==========================================
 const ChannelPage = ({ channelId, channelName, goBack, user }) => {
     const [activeChannelTab, setActiveChannelTab] = useState('vods');
@@ -817,7 +953,7 @@ const ChannelPage = ({ channelId, channelName, goBack, user }) => {
 };
 
 // ==========================================
-// 9. ABOUT & ADMIN PAGES
+// 11. ABOUT & PACKAGES
 // ==========================================
 const AboutUsPage = () => {
     const [tab, setTab] = useState('about');
@@ -830,7 +966,7 @@ const AboutUsPage = () => {
             </div>
             {tab === 'about' && (
                 <div className="bg-black/60 border border-white/10 p-6 rounded-lg text-white/80 font-mono space-y-4 leading-relaxed">
-                    <p>Welcome to <span className="text-[#FF00A6] font-bold">ESPORTRESTREAM</span>, the ultimate third-party streaming aggregator built for gamers and esports enthusiasts.</p>
+                    <p>Welcome to <span className="text-[#FF00A6] font-bold">ESPORTRESTREAM</span>, the ultimate third-party streaming aggregator built for gamers and esports enthusiasts. The EsportRestream platform is developed as a centralized hub to address the fragmentation of esports content across various titles like MLBB and PUBG. The system features a tournament timetable synchronized with real-world events, providing automated alarm notifications to prevent missed broadcasts. Key functionalities include a live chat module for audience interaction and a fan-support system for player engagement. A SQL database is integrated to maintain data integrity for schedules and user logs. Evaluation confirms the system's reliability in notification delivery and user interaction, offering a streamlined environment for esports audiences.</p>
                 </div>
             )}
             {tab === 'packages' && (
@@ -857,15 +993,9 @@ const AboutUsPage = () => {
     )
 };
 
-const AdminPanel = () => (
-    <div className="p-8 h-full overflow-y-auto">
-        <h2 className="text-3xl font-black text-white uppercase mb-8 flex items-center gap-3"><Shield className="text-red-500" /> SYSTEM ADMIN PANEL</h2>
-        <div className="bg-black/60 border-2 border-red-500/50 p-6 rounded-lg"><button className="px-6 py-3 bg-red-600 text-white font-black uppercase rounded">Manage Users</button></div>
-    </div>
-);
 
 // ==========================================
-// 10. MAIN APP COMPONENT (With Alarm/Notification System)
+// 12. MAIN APP COMPONENT (With Alarm, Tournaments & Nav)
 // ==========================================
 export default function App() {
     const [activeTab, setActiveTab] = useState('home');
@@ -898,38 +1028,25 @@ export default function App() {
                     const newData = { name: currentUser.displayName, email: currentUser.email, role: 'audience', joinedDate: Date.now(), subscriptionPlan: 'free' };
                     await set(userRef, newData);
                     setUserProfileData(newData);
-                    // Welcome Notification Trigger
-                    push(ref(db, `notifications/${currentUser.uid}`), { text: 'Welcome to ESPORTRESTREAM! Start watching your favorite streamers.', time: serverTimestamp(), read: false });
+                    push(ref(db, `notifications/${currentUser.uid}`), { text: 'Welcome to ESPORTRESTREAM! Check out the TOURNAMENTS to set alarms.', time: serverTimestamp(), read: false });
                 }
             } else setUserProfileData(null);
         });
         return () => unsubscribe();
     }, []);
 
-    // Fetch Notifications from Firebase
     useEffect(() => {
         if (user) {
             onValue(ref(db, `notifications/${user.uid}`), (snapshot) => {
-                const data = snapshot.val();
-                if (data) setNotifications(Object.keys(data).map(k => ({ id: k, ...data[k] })).reverse());
+                if (snapshot.exists()) setNotifications(Object.keys(snapshot.val()).map(k => ({ id: k, ...snapshot.val()[k] })).reverse());
                 else setNotifications([]);
             });
-        } else {
-            setNotifications([]);
         }
     }, [user]);
 
     const unreadCount = notifications.filter(n => !n.read).length;
-
-    const markAsRead = (notifId) => {
-        update(ref(db, `notifications/${user.uid}/${notifId}`), { read: true });
-    };
-
-    const markAllAsRead = () => {
-        notifications.forEach(n => {
-            if(!n.read) update(ref(db, `notifications/${user.uid}/${n.id}`), { read: true });
-        });
-    };
+    const markAsRead = (notifId) => update(ref(db, `notifications/${user.uid}/${notifId}`), { read: true });
+    const markAllAsRead = () => notifications.forEach(n => { if(!n.read) update(ref(db, `notifications/${user.uid}/${n.id}`), { read: true }); });
 
     const userRole = userProfileData?.role || 'audience';
 
@@ -938,6 +1055,7 @@ export default function App() {
             title: 'GENERAL',
             items: [
                 { id: 'home', label: 'HOME (VODS)', icon: Home, show: true },
+                { id: 'tournaments', label: 'TOURNAMENTS', icon: CalendarDays, show: true },
                 { id: 'lives', label: 'LIVES', icon: MonitorPlay, show: true },
                 { id: 'live', label: 'NOW STREAMING', icon: PlayCircle, show: true },
                 { id: 'highlights', label: 'HIGHLIGHTS', icon: Zap, show: true },
@@ -981,7 +1099,6 @@ export default function App() {
                     </div>
                 </div>
                 
-                {/* Alarm / Notification System in Header */}
                 <div className="flex items-center gap-4 relative">
                     <div className="relative">
                         <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 text-white/70 hover:text-[#FF00A6] transition relative bg-white/5 rounded-full">
@@ -989,7 +1106,6 @@ export default function App() {
                             {unreadCount > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_8px_red]"></span>}
                         </button>
                         
-                        {/* Notification Dropdown Panel */}
                         {showNotifications && (
                             <div className="absolute right-0 mt-3 w-80 bg-black/95 backdrop-blur-xl border-2 border-[#00FF41]/50 rounded-lg shadow-[0_0_20px_rgba(0,255,65,0.4)] z-50 overflow-hidden flex flex-col animate-fade-in">
                                 <div className="p-4 border-b border-[#00FF41]/30 flex justify-between items-center bg-black">
@@ -997,13 +1113,10 @@ export default function App() {
                                     {unreadCount > 0 && <button onClick={markAllAsRead} className="text-[10px] text-white/50 hover:text-[#FF00A6] transition uppercase font-bold bg-white/5 px-2 py-1 rounded">Mark all read</button>}
                                 </div>
                                 <div className="max-h-80 overflow-y-auto custom-scrollbar p-2 space-y-2">
-                                    {notifications.length === 0 ? (
-                                        <p className="text-center text-white/40 text-xs py-6 font-mono">No new alarms.</p>
-                                    ) : (
+                                    {notifications.length === 0 ? <p className="text-center text-white/40 text-xs py-6 font-mono">No new alarms.</p> : (
                                         notifications.map(n => (
                                             <div key={n.id} onClick={() => markAsRead(n.id)} className={`p-3 rounded-md cursor-pointer border-l-2 transition ${n.read ? 'bg-white/5 border-transparent opacity-60' : 'bg-[#00FF41]/10 border-[#00FF41] hover:bg-[#00FF41]/20 shadow-[0_0_10px_rgba(0,255,65,0.1)]'}`}>
                                                 <p className={`text-sm ${n.read ? 'text-white/70' : 'text-white font-bold'}`}>{n.text}</p>
-                                                <p className="text-white/40 text-[10px] font-mono mt-2">{n.time ? new Date(n.time).toLocaleString() : 'Just now'}</p>
                                             </div>
                                         ))
                                     )}
@@ -1023,12 +1136,10 @@ export default function App() {
                             return (
                                 <div key={idx} className="mb-4">
                                     {isSidebarOpen && <h4 className="px-5 mb-2 text-[10px] font-black uppercase text-white/40 tracking-widest">{category.title}</h4>}
-                                    {isSidebarOpen && <div className="h-px bg-white/10 mx-4 mb-2"></div>}
                                     <div className="px-2 space-y-1">
                                         {visibleItems.map(item => (
                                             <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-4 px-3 py-3 rounded-lg font-bold transition whitespace-nowrap overflow-hidden ${activeTab === item.id ? 'bg-[#FF00A6]/20 text-[#FF00A6]' : 'text-white/60 hover:bg-white/5'}`}>
-                                                <item.icon size={20} className="shrink-0" />
-                                                <span className={`text-sm uppercase tracking-wider transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>{item.label}</span>
+                                                <item.icon size={20} className="shrink-0" /><span className={`text-sm uppercase tracking-wider transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>{item.label}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -1038,13 +1149,9 @@ export default function App() {
                     </div>
                     <div className="p-2 border-t border-white/10">
                         {user ? (
-                            <button onClick={() => {signOut(auth); setActiveTab('home');}} className="w-full flex items-center gap-4 px-3 py-3 rounded-lg text-white/50 hover:text-red-500 transition">
-                                <LogOut size={20} className="shrink-0" /><span className={`text-sm font-bold uppercase ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>LOGOUT</span>
-                            </button>
+                            <button onClick={() => {signOut(auth); setActiveTab('home');}} className="w-full flex items-center gap-4 px-3 py-3 rounded-lg text-white/50 hover:text-red-500 transition"><LogOut size={20} className="shrink-0" /><span className={`text-sm font-bold uppercase ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>LOGOUT</span></button>
                         ) : (
-                            <button onClick={async () => await signInWithPopup(auth, provider)} className="w-full flex items-center gap-4 px-3 py-3 rounded-lg text-black bg-[#00FF41] hover:bg-[#00FF41]/80 transition">
-                                <LogIn size={20} className="shrink-0" /><span className={`text-sm font-black uppercase ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>LOGIN</span>
-                            </button>
+                            <button onClick={async () => await signInWithPopup(auth, provider)} className="w-full flex items-center gap-4 px-3 py-3 rounded-lg text-black bg-[#00FF41] hover:bg-[#00FF41]/80 transition"><LogIn size={20} className="shrink-0" /><span className={`text-sm font-black uppercase ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>LOGIN</span></button>
                         )}
                     </div>
                 </aside>
@@ -1052,14 +1159,15 @@ export default function App() {
                 <main className="flex-1 h-full overflow-hidden relative bg-black">
                     <div className="absolute inset-0 z-10 h-full w-full">
                         {activeTab === 'home' && <HomePage />}
+                        {activeTab === 'tournaments' && <TournamentsPage />}
                         {activeTab === 'lives' && <LivesPage setSelectedLive={setSelectedLive} setActiveTab={setActiveTab} />}
                         {activeTab === 'live' && <LiveStreamingPage selectedLive={selectedLive} setSelectedLive={setSelectedLive} user={user} />}
                         {activeTab === 'highlights' && <HighlightsPage user={user} />}
-                        {activeTab === 'subs' && <SubscriptionsPage user={user} goToChannel={goToChannel} />}
                         {activeTab === 'profile' && <UserProfilePage user={user} userProfileData={userProfileData} />}
                         {activeTab === 'streamer_dash' && <StreamerDashboard user={user} />}
                         {activeTab === 'about' && <AboutUsPage />}
                         {activeTab === 'admin_panel' && <AdminPanel />}
+                        {activeTab === 'subs' && <SubscriptionsPage user={user} goToChannel={goToChannel} />}
                         {activeTab === 'channel' && <ChannelPage user={user} channelId={selectedChannelId} channelName={selectedChannelName} goBack={() => setActiveTab('subs')} />}
                     </div>
                 </main>
